@@ -1,0 +1,82 @@
+// Prisma Schema for 51Talk Dashboard
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 销售人员信息表
+model SalesPerson {
+  id           Int            @id @default(autoincrement())
+  openUserId   String         @unique @map("open_user_id") @db.VarChar(100)
+  name         String         @db.VarChar(100)
+  groupName    String?        @map("group_name") @db.VarChar(100)
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+
+  dailyMetrics DailyMetric[]
+  cacheRecords DateRangeCache[]
+
+  @@map("sales_person")
+}
+
+// 每日元数据表
+model DailyMetric {
+  id                      Int      @id @default(autoincrement())
+  date                    DateTime @db.Date
+  openUserId              String   @map("open_user_id") @db.VarChar(100)
+  customerTurnCount       Int      @default(0) @map("customer_turn_count")
+  timelyReplyCount        Int      @default(0) @map("timely_reply_count")
+  overtimeReplyCount      Int      @default(0) @map("overtime_reply_count")
+  totalReplyDuration      BigInt   @default(0) @map("total_reply_duration") // 单位：秒
+  newRuleCustomerTurnCount Int     @default(0) @map("new_rule_customer_turn_count") // 新规则总消息数
+  overtimeNoReplyCount    Int      @default(0) @map("overtime_no_reply_count") // 超时未回复数
+  processedConversationIds String[] @default([]) @map("processed_conversation_ids")
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
+
+  salesPerson SalesPerson @relation(fields: [openUserId], references: [openUserId])
+
+  @@unique([date, openUserId])
+  @@index([date])
+  @@index([openUserId])
+  @@map("daily_metrics")
+}
+
+// 日期范围缓存表
+model DateRangeCache {
+  id                       Int      @id @default(autoincrement())
+  startDate                DateTime @map("start_date") @db.Date
+  endDate                  DateTime @map("end_date") @db.Date
+  openUserId               String   @map("open_user_id") @db.VarChar(100)
+  customerTurnCount        Int      @map("customer_turn_count")
+  timelyReplyRate          Decimal  @map("timely_reply_rate") @db.Decimal(5, 2)
+  overtimeReplyRate        Decimal  @map("overtime_reply_rate") @db.Decimal(5, 2)
+  avgReplyDuration         Decimal  @map("avg_reply_duration") @db.Decimal(10, 2) // 单位：分钟
+  newRuleCustomerTurnCount Int      @default(0) @map("new_rule_customer_turn_count") // 新规则总消息数
+  overtimeReplyCount       Int      @default(0) @map("overtime_reply_count") // 超时回复数
+  overtimeNoReplyCount     Int      @default(0) @map("overtime_no_reply_count") // 超时未回复数
+  conversationCount        Int      @default(0) @map("conversation_count") // 会话数
+  createdAt                DateTime @default(now()) @map("created_at")
+
+  salesPerson SalesPerson @relation(fields: [openUserId], references: [openUserId])
+
+  @@unique([startDate, endDate, openUserId])
+  @@index([startDate, endDate])
+  @@map("date_range_cache")
+}
+
+// API令牌管理表
+model ApiToken {
+  id          Int      @id @default(autoincrement())
+  tokenType   String   @default("app_access_token") @map("token_type") @db.VarChar(50)
+  accessToken String   @map("access_token") @db.Text
+  expiresAt   DateTime @map("expires_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("api_tokens")
+}
