@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { SalesData, QueryParams } from '../types';
+import type { SalesData, QueryParams, TrendQueryParams, TrendResponse, DateRange } from '../types';
 
 const client = axios.create({
   baseURL: '/api',
@@ -36,9 +36,17 @@ export async function getGroups(): Promise<string[]> {
 
 /**
  * 获取销售列表
+ * @param groupName 小组名称（可选）
+ * @param startDate 开始日期（可选，格式：YYYY-MM-DD）
+ * @param endDate 结束日期（可选，格式：YYYY-MM-DD）
+ * @returns 销售列表。如果提供日期范围，则只返回该时间范围内有数据的销售
  */
-export async function getSales(groupName?: string): Promise<{ openUserId: string; name: string; groupName: string | null }[]> {
-  return client.get('/sales', { params: { groupName } });
+export async function getSales(
+  groupName?: string,
+  startDate?: string,
+  endDate?: string
+): Promise<{ openUserId: string; name: string; groupName: string | null }[]> {
+  return client.get('/sales', { params: { groupName, startDate, endDate } });
 }
 
 /**
@@ -46,4 +54,18 @@ export async function getSales(groupName?: string): Promise<{ openUserId: string
  */
 export async function triggerCollect(date?: string) {
   return client.post('/collect', { date });
+}
+
+/**
+ * 获取趋势数据
+ */
+export async function getTrendData(params: TrendQueryParams): Promise<TrendResponse> {
+  return client.get('/trend', { params });
+}
+
+/**
+ * 获取可用的日期范围
+ */
+export async function getTrendDateRange(): Promise<DateRange | null> {
+  return client.get('/trend/date-range');
 }

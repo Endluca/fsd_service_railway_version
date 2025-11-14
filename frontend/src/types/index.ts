@@ -32,3 +32,33 @@ export interface QueryParams {
   groupName?: string;
   openUserId?: string;
 }
+
+// 趋势数据相关类型
+export type Granularity = 'day' | 'week';
+export type ComparisonType = 'all' | 'group' | 'person';
+export type MetricType = 'timelyReplyRate' | 'overtimeReplyRate' | 'avgReplyDuration' | 'conversationCount';
+
+export interface TrendQueryParams {
+  startDate: string;
+  endDate: string;
+  granularity: Granularity;
+  comparisonType: ComparisonType;
+  groupName?: string;
+  metric: MetricType;
+}
+
+export interface TrendDataPoint {
+  date: string; // YYYY-MM-DD 或 YYYY-WW (周格式)
+  value: number;
+  name: string; // 线的名称（全公司/组名/人名）
+}
+
+export interface TrendResponse {
+  series: TrendDataPoint[]; // 时间序列数据点
+  lines: string[]; // 所有线的名称列表
+}
+
+export interface DateRange {
+  startDate: string;
+  endDate: string;
+}

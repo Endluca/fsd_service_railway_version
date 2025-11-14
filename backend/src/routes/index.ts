@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import dataService from '../services/dataService';
 import scheduler from '../services/scheduler';
 import dataCollector from '../services/dataCollector';
+import trendService from '../services/trendService';
 
 const router = express.Router();
 
@@ -66,12 +67,17 @@ router.get('/groups', async (req: Request, res: Response) => {
 /**
  * 获取销售列表
  * GET /api/sales
- * Query params: groupName (optional)
+ * Query params: groupName (optional), startDate (optional), endDate (optional)
+ * 当提供 startDate 和 endDate 时，只返回该时间范围内有数据的销售
  */
 router.get('/sales', async (req: Request, res: Response) => {
   try {
-    const { groupName } = req.query;
-    const sales = await dataService.getSalesList(groupName as string | undefined);
+    const { groupName, startDate, endDate } = req.query;
+    const sales = await dataService.getSalesList(
+      groupName as string | undefined,
+      startDate as string | undefined,
+      endDate as string | undefined
+    );
     res.json({
       code: 0,
       message: 'success',
@@ -150,6 +156,81 @@ router.post('/collect-range', async (req: Request, res: Response) => {
     res.status(500).json({
       code: 500,
       message: error.message || '批量数据采集失败',
+    });
+  }
+});
+
+/**
+ * 获取趋势数据
+ * GET /api/trend
+ * Query params:
+ *   - startDate: 开始日期 (YYYY-MM-DD)
+ *   - endDate: 结束日期 (YYYY-MM-DD)
+ *   - granularity: 时间颗粒度 ('day' | 'week')
+ *   - comparisonType: 对比类型 ('all' | 'group' | 'person')
+ *   - groupName: 小组名称 (当 comparisonType='person' 时必填)
+ *   - metric: 指标类型 ('timelyReplyRate' | 'overtimeReplyRate' | 'avgReplyDuration' | 'conversationCount')
+ */
+router.get('/trend', async (req: Request, res: Response) => {
+  try {
+    const { startDate, endDate, granularity, comparisonType, groupName, metric } = req.query;
+
+    // 参数验证
+    if (!startDate || !endDate || !granularity || !comparisonType || !metric) {
+      return res.status(400).json({
+        code: 400,
+        message: '缺少必需参数: startDate, endDate, granularity, comparisonType, metric',
+      });
+    }
+
+    if (comparisonType === 'person' && !groupName) {
+      return res.status(400).json({
+        code: 400,
+        message: '选择个人对比时必须指定 groupName',
+      });
+    }
+
+    const trendData = await trendService.getTrendData({
+      startDate: startDate as string,
+      endDate: endDate as string,
+      granularity: granularity as 'day' | 'week',
+      comparisonType: comparisonType as 'all' | 'group' | 'person',
+      groupName: groupName as string | undefined,
+      metric: metric as 'timelyReplyRate' | 'overtimeReplyRate' | 'avgReplyDuration' | 'conversationCount',
+    });
+
+    res.json({
+      code: 0,
+      message: 'success',
+      data: trendData,
+    });
+  } catch (error: any) {
+    console.error('获取趋势数据失败:', error);
+    res.status(500).json({
+      code: 500,
+      message: error.message || '服务器错误',
+    });
+  }
+});
+
+/**
+ * 获取可用的日期范围
+ * GET /api/trend/date-range
+ */
+router.get('/trend/date-range', async (req: Request, res: Response) => {
+  try {
+    const dateRange = await trendService.getAvailableDateRange();
+
+    res.json({
+      code: 0,
+      message: 'success',
+      data: dateRange,
+    });
+  } catch (error: any) {
+    console.error('获取日期范围失败:', error);
+    res.status(500).json({
+      code: 500,
+      message: error.message || '服务器错误',
     });
   }
 });

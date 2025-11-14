@@ -321,9 +321,46 @@ export class DataService {
   }
 
   /**
-   * 获取所有销售列表
+   * 获取销售列表
+   * @param groupName 小组名称（可选）
+   * @param startDate 开始日期（可选，格式：YYYY-MM-DD）
+   * @param endDate 结束日期（可选，格式：YYYY-MM-DD）
+   * @returns 销售列表。如果提供日期范围，则只返回该时间范围内有数据的销售
    */
-  async getSalesList(groupName?: string) {
+  async getSalesList(groupName?: string, startDate?: string, endDate?: string) {
+    // 如果提供了日期范围，只返回该时间范围内有数据的销售
+    if (startDate && endDate) {
+      const where: Prisma.SalesPersonWhereInput = {
+        dailyMetrics: {
+          some: {
+            date: {
+              gte: new Date(startDate),
+              lte: new Date(endDate),
+            },
+          },
+        },
+      };
+
+      if (groupName) {
+        where.groupName = groupName;
+      }
+
+      const sales = await prisma.salesPerson.findMany({
+        where,
+        select: {
+          openUserId: true,
+          name: true,
+          groupName: true,
+        },
+        orderBy: {
+          name: 'asc',
+        },
+      });
+
+      return sales;
+    }
+
+    // 如果没有提供日期范围，返回所有销售（原有逻辑）
     const where: Prisma.SalesPersonWhereInput = {};
     if (groupName) {
       where.groupName = groupName;

@@ -12,11 +12,13 @@ import {
   Statistic,
   Row,
   Col,
+  Tabs,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs, { Dayjs } from 'dayjs';
 import { queryDashboard, getGroups, getSales } from './services/api';
 import type { SalesData } from './types';
+import TrendComparison from './components/TrendComparison';
 import './App.css';
 
 const { Header, Content } = Layout;
@@ -103,15 +105,18 @@ const App: React.FC = () => {
     loadGroups();
   }, []);
 
-  // 当选择小组时，加载该小组的销售列表
+  // 当选择小组或日期范围改变时，加载该小组在该时间范围内有数据的销售列表
   useEffect(() => {
-    if (selectedGroup) {
+    if (selectedGroup && dateRange && dateRange[0] && dateRange[1]) {
+      loadSales(selectedGroup, dateRange[0].format('YYYY-MM-DD'), dateRange[1].format('YYYY-MM-DD'));
+    } else if (selectedGroup) {
+      // 如果只选择了小组但没有日期，则加载该小组所有销售
       loadSales(selectedGroup);
     } else {
       setSalesList([]);
       setSelectedSales(undefined);
     }
-  }, [selectedGroup]);
+  }, [selectedGroup, dateRange]);
 
   const loadGroups = async () => {
     try {
@@ -122,10 +127,22 @@ const App: React.FC = () => {
     }
   };
 
-  const loadSales = async (groupName?: string) => {
+  const loadSales = async (groupName?: string, startDate?: string, endDate?: string) => {
     try {
-      const sales = await getSales(groupName);
-      setSalesList(sales);
+      const sales = await getSales(groupName, startDate, endDate);
+      // 过滤掉无效数据并去重
+      const uniqueSales = sales
+        .filter((sale) => sale.openUserId && sale.openUserId.trim() !== '') // 确保有有效的 openUserId
+        .filter(
+          (sale, index, self) =>
+            index === self.findIndex((s) => s.openUserId === sale.openUserId) // 去重
+        );
+      setSalesList(uniqueSales);
+
+      // 如果当前选中的销售不在新列表中，清空选择
+      if (selectedSales && !uniqueSales.find((s) => s.openUserId === selectedSales)) {
+        setSelectedSales(undefined);
+      }
     } catch (error) {
       message.error('加载销售列表失败');
     }
@@ -275,7 +292,17 @@ const App: React.FC = () => {
       </Header>
 
       <Content style={{ padding: '24px', background: '#f0f2f5' }}>
-        <div style={{ background: '#fff', padding: '24px', borderRadius: '8px' }}>
+        <div style={{ background: '#fff', borderRadius: '8px' }}>
+          <Tabs
+            defaultActiveKey="dashboard"
+            size="large"
+            style={{ padding: '0 24px' }}
+            items={[
+              {
+                key: 'dashboard',
+                label: '数据看板',
+                children: (
+                  <div style={{ padding: '0 0 24px 0' }}>
           {/* 筛选区域 */}
           <Space size="middle" wrap style={{ marginBottom: 24 }}>
             <Space>
@@ -313,7 +340,21 @@ const App: React.FC = () => {
                 disabled={!selectedGroup}
                 options={[
                   { label: '全部BCM', value: undefined },
-                  ...salesList.map((s) => ({ label: s.name, value: s.openUserId })),
+                  ...(() => {
+                    // 检测重复的名字
+                    const nameCount = new Map<string, number>();
+                    salesList.forEach((s) => {
+                      nameCount.set(s.name, (nameCount.get(s.name) || 0) + 1);
+                    });
+
+                    // 为重复的名字添加 openUserId 后缀
+                    return salesList.map((s) => ({
+                      label: nameCount.get(s.name)! > 1
+                        ? `${s.name} (${s.openUserId.slice(-6)})`
+                        : s.name,
+                      value: s.openUserId,
+                    }));
+                  })(),
                 ]}
               />
             </Space>
@@ -454,6 +495,16 @@ const App: React.FC = () => {
             <div>• 平均回复时长 = 查询时间范围内销售回复总时长（含AI回复轮次） / 总消息数</div>
             <div>• 及时回复率 + 超时回复率 = 1</div>
           </div>
+                  </div>
+                ),
+              },
+              {
+                key: 'trend',
+                label: '趋势对比',
+                children: <TrendComparison />,
+              },
+            ]}
+          />
         </div>
       </Content>
     </Layout>
