@@ -3,6 +3,7 @@ import dataService from '../services/dataService';
 import scheduler from '../services/scheduler';
 import dataCollector from '../services/dataCollector';
 import trendService from '../services/trendService';
+import topicminingRoutes from './topicmining';
 
 const router = express.Router();
 
@@ -234,6 +235,12 @@ router.get('/trend/date-range', async (req: Request, res: Response) => {
     });
   }
 });
+
+/**
+ * TopicMining 话题挖掘路由
+ * /api/topicmining/*
+ */
+router.use('/topicmining', topicminingRoutes);
 
 /**
  * 健康检查

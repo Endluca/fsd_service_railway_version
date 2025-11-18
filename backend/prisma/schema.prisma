@@ -80,3 +80,19 @@ model ApiToken {
 
   @@map("api_tokens")
 }
+
+// TopicMining: 报告表
+model Report {
+  id             String   @id @default(uuid())
+  title          String   @db.VarChar(255)
+  summary        String?  @db.Text
+  statisticsJson Json     @map("statistics_json")
+  samplesJson    Json     @map("samples_json")
+  metadataJson   Json?    @map("metadata_json")
+  generatedAt    DateTime @map("generated_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([createdAt(sort: Desc)])
+  @@map("reports")
+}
