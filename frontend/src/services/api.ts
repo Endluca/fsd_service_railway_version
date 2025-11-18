@@ -36,17 +36,17 @@ export async function getGroups(): Promise<string[]> {
 
 /**
  * 获取销售列表
- * @param groupName 小组名称（可选）
+ * @param groupNames 小组名称数组（可选）
  * @param startDate 开始日期（可选，格式：YYYY-MM-DD）
  * @param endDate 结束日期（可选，格式：YYYY-MM-DD）
  * @returns 销售列表。如果提供日期范围，则只返回该时间范围内有数据的销售
  */
 export async function getSales(
-  groupName?: string,
+  groupNames?: string[],
   startDate?: string,
   endDate?: string
 ): Promise<{ openUserId: string; name: string; groupName: string | null }[]> {
-  return client.get('/sales', { params: { groupName, startDate, endDate } });
+  return client.get('/sales', { params: { groupNames, startDate, endDate } });
 }
 
 /**

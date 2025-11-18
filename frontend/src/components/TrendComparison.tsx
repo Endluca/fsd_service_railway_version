@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Space,
   Radio,
@@ -14,13 +14,11 @@ import { Line } from '@ant-design/charts';
 import dayjs, { Dayjs } from 'dayjs';
 import isoWeek from 'dayjs/plugin/isoWeek';
 import type {
-  Granularity,
-  ComparisonType,
   MetricType,
-  TrendResponse,
   DateRange,
 } from '../types';
 import { getTrendData, getTrendDateRange, getGroups } from '../services/api';
+import { useTrendStore } from '../stores/useTrendStore';
 
 dayjs.extend(isoWeek);
 
@@ -64,16 +62,27 @@ const generateColors = (count: number): string[] => {
 };
 
 const TrendComparison: React.FC = () => {
-  // 状态管理
+  // 从store获取状态和actions
+  const {
+    comparisonType,
+    granularity,
+    metric,
+    dateRange,
+    selectedGroup,
+    trendData,
+    setComparisonType,
+    setGranularity,
+    setMetric,
+    setDateRange,
+    setSelectedGroup,
+    setTrendData,
+  } = useTrendStore();
+
+  // 本地状态（不需要持久化的状态）
   const [loading, setLoading] = useState(false);
-  const [comparisonType, setComparisonType] = useState<ComparisonType>('all');
-  const [granularity, setGranularity] = useState<Granularity>('day');
-  const [metric, setMetric] = useState<MetricType>('timelyReplyRate');
-  const [dateRange, setDateRange] = useState<[Dayjs, Dayjs] | null>(null);
   const [availableDateRange, setAvailableDateRange] = useState<DateRange | null>(null);
   const [groups, setGroups] = useState<string[]>([]);
-  const [selectedGroup, setSelectedGroup] = useState<string | undefined>();
-  const [trendData, setTrendData] = useState<TrendResponse | null>(null);
+  const isInitialMountRef = useRef(true);
 
   // 加载初始数据
   useEffect(() => {
@@ -86,23 +95,30 @@ const TrendComparison: React.FC = () => {
       const dateRangeData = await getTrendDateRange();
       if (dateRangeData) {
         setAvailableDateRange(dateRangeData);
-        // 设置默认日期范围为最近7天
-        const end = dayjs(dateRangeData.endDate);
-        const start = end.subtract(6, 'day');
-        setDateRange([start, end]);
+        // 只在没有保存的日期范围时，设置默认日期范围为最近7天
+        if (!dateRange) {
+          const end = dayjs(dateRangeData.endDate);
+          const start = end.subtract(6, 'day');
+          setDateRange([start, end]);
+        }
       }
 
       // 加载小组列表
       const groupsData = await getGroups();
       setGroups(groupsData);
+
+      // 标记初始挂载完成
+      isInitialMountRef.current = false;
     } catch (error) {
       console.error('加载初始数据失败:', error);
       message.error('加载初始数据失败');
     }
   };
 
-  // 当对比类型或小组改变时，重置数据
+  // 当对比类型改变时（不是初始挂载时），重置相关数据
   useEffect(() => {
+    if (isInitialMountRef.current) return; // 跳过初始挂载
+
     if (comparisonType !== 'person') {
       setSelectedGroup(undefined);
     }

@@ -8,13 +8,28 @@ import topicminingRoutes from './topicmining';
 const router = express.Router();
 
 /**
+ * 解析查询参数为数组
+ * 支持逗号分隔的字符串和重复的查询参数
+ */
+function parseArrayParam(param: string | string[] | undefined): string[] | undefined {
+  if (!param) return undefined;
+
+  if (Array.isArray(param)) {
+    return param;
+  }
+
+  // 逗号分隔的字符串
+  return param.split(',').map(s => s.trim()).filter(Boolean);
+}
+
+/**
  * 查询数据看板
  * GET /api/dashboard
- * Query params: startDate, endDate, groupName (optional), openUserId (optional)
+ * Query params: startDate, endDate, groupNames (optional, comma-separated), openUserIds (optional, comma-separated)
  */
 router.get('/dashboard', async (req: Request, res: Response) => {
   try {
-    const { startDate, endDate, groupName, openUserId } = req.query;
+    const { startDate, endDate, groupNames, openUserIds } = req.query;
 
     if (!startDate || !endDate) {
       return res.status(400).json({
@@ -23,11 +38,14 @@ router.get('/dashboard', async (req: Request, res: Response) => {
       });
     }
 
+    const groupNamesArray = parseArrayParam(groupNames as string | string[] | undefined);
+    const openUserIdsArray = parseArrayParam(openUserIds as string | string[] | undefined);
+
     const results = await dataService.queryDateRange(
       startDate as string,
       endDate as string,
-      groupName as string | undefined,
-      openUserId as string | undefined
+      groupNamesArray,
+      openUserIdsArray
     );
 
     res.json({
@@ -68,14 +86,16 @@ router.get('/groups', async (req: Request, res: Response) => {
 /**
  * 获取销售列表
  * GET /api/sales
- * Query params: groupName (optional), startDate (optional), endDate (optional)
+ * Query params: groupNames (optional, comma-separated), startDate (optional), endDate (optional)
  * 当提供 startDate 和 endDate 时，只返回该时间范围内有数据的销售
  */
 router.get('/sales', async (req: Request, res: Response) => {
   try {
-    const { groupName, startDate, endDate } = req.query;
+    const { groupNames, startDate, endDate } = req.query;
+    const groupNamesArray = parseArrayParam(groupNames as string | string[] | undefined);
+
     const sales = await dataService.getSalesList(
-      groupName as string | undefined,
+      groupNamesArray,
       startDate as string | undefined,
       endDate as string | undefined
     );

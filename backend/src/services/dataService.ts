@@ -10,26 +10,28 @@ export class DataService {
    * 查询日期范围内的数据
    * @param startDate 开始日期 (YYYY-MM-DD)
    * @param endDate 结束日期 (YYYY-MM-DD)
-   * @param groupName 小组名称（可选）
-   * @param openUserId 销售ID（可选）
+   * @param groupNames 小组名称数组（可选）
+   * @param openUserIds 销售ID数组（可选）
    */
   async queryDateRange(
     startDate: string,
     endDate: string,
-    groupName?: string,
-    openUserId?: string
+    groupNames?: string[],
+    openUserIds?: string[]
   ) {
-    console.log(`查询数据: ${startDate} ~ ${endDate}, 小组: ${groupName || '全部'}, 销售: ${openUserId || '全部'}`);
+    console.log(`查询数据: ${startDate} ~ ${endDate}, 小组: ${groupNames?.join(',') || '全部'}, 销售: ${openUserIds?.join(',') || '全部'}`);
 
-    // 1. 先尝试从缓存获取
-    const cachedResults = await this.getCachedResults(startDate, endDate, groupName, openUserId);
-    if (cachedResults) {
-      console.log('使用缓存数据');
-      return cachedResults;
+    // 1. 先尝试从缓存获取（仅当查询单个销售时使用缓存）
+    if (openUserIds && openUserIds.length === 1 && (!groupNames || groupNames.length === 0)) {
+      const cachedResults = await this.getCachedResults(startDate, endDate, undefined, openUserIds[0]);
+      if (cachedResults) {
+        console.log('使用缓存数据');
+        return cachedResults;
+      }
     }
 
     // 2. 从数据库计算
-    const results = await this.calculateResults(startDate, endDate, groupName, openUserId);
+    const results = await this.calculateResults(startDate, endDate, groupNames, openUserIds);
 
     // 3. 保存缓存
     await this.saveCacheResults(results, startDate, endDate);
@@ -79,7 +81,7 @@ export class DataService {
     }
 
     // 如果没有指定销售，检查是否所有销售都有缓存
-    const allSales = await this.getAllSalesInDateRange(startDate, endDate, groupName);
+    const allSales = await this.getAllSalesInDateRange(startDate, endDate, groupName ? [groupName] : undefined);
     if (allSales.length === 0) {
       return [];
     }
@@ -125,8 +127,8 @@ export class DataService {
   private async calculateResults(
     startDate: string,
     endDate: string,
-    groupName?: string,
-    openUserId?: string
+    groupNames?: string[],
+    openUserIds?: string[]
   ) {
     // 查询条件
     const where: Prisma.DailyMetricWhereInput = {
@@ -136,8 +138,8 @@ export class DataService {
       },
     };
 
-    if (openUserId) {
-      where.openUserId = openUserId;
+    if (openUserIds && openUserIds.length > 0) {
+      where.openUserId = { in: openUserIds };
     }
 
     // 查询所有相关的每日数据
@@ -166,7 +168,7 @@ export class DataService {
       const { name, groupName: salesGroupName } = metric.salesPerson;
 
       // 如果指定了小组过滤
-      if (groupName && salesGroupName !== groupName) {
+      if (groupNames && groupNames.length > 0 && !groupNames.includes(salesGroupName || '')) {
         continue;
       }
 
@@ -281,7 +283,7 @@ export class DataService {
   private async getAllSalesInDateRange(
     startDate: string,
     endDate: string,
-    groupName?: string
+    groupNames?: string[]
   ) {
     const where: Prisma.DailyMetricWhereInput = {
       date: {
@@ -322,12 +324,12 @@ export class DataService {
 
   /**
    * 获取销售列表
-   * @param groupName 小组名称（可选）
+   * @param groupNames 小组名称数组（可选）
    * @param startDate 开始日期（可选，格式：YYYY-MM-DD）
    * @param endDate 结束日期（可选，格式：YYYY-MM-DD）
    * @returns 销售列表。如果提供日期范围，则只返回该时间范围内有数据的销售
    */
-  async getSalesList(groupName?: string, startDate?: string, endDate?: string) {
+  async getSalesList(groupNames?: string[], startDate?: string, endDate?: string) {
     // 如果提供了日期范围，只返回该时间范围内有数据的销售
     if (startDate && endDate) {
       const where: Prisma.SalesPersonWhereInput = {
@@ -341,8 +343,8 @@ export class DataService {
         },
       };
 
-      if (groupName) {
-        where.groupName = groupName;
+      if (groupNames && groupNames.length > 0) {
+        where.groupName = { in: groupNames };
       }
 
       const sales = await prisma.salesPerson.findMany({
@@ -362,8 +364,8 @@ export class DataService {
 
     // 如果没有提供日期范围，返回所有销售（原有逻辑）
     const where: Prisma.SalesPersonWhereInput = {};
-    if (groupName) {
-      where.groupName = groupName;
+    if (groupNames && groupNames.length > 0) {
+      where.groupName = { in: groupNames };
     }
 
     const sales = await prisma.salesPerson.findMany({

@@ -8,12 +8,22 @@ import ReportGenerator from './components/ReportGenerator';
 import ReportHistory from './components/ReportHistory';
 import ReportViewer from './components/ReportViewer';
 import type { CsvParseResult } from '../../types/topicmining';
+import { useTopicMiningStore } from '../../stores/useTopicMiningStore';
 
 const { Title } = Typography;
 
 const TopicMining: React.FC = () => {
-  const [parseResult, setParseResult] = useState<CsvParseResult | null>(null);
-  const [fileName, setFileName] = useState<string>('');
+  // 从store获取状态和actions
+  const {
+    parseResult,
+    fileName,
+    activeTab,
+    setParseResult,
+    setFileName,
+    setActiveTab,
+  } = useTopicMiningStore();
+
+  // 本地状态（不需要持久化的状态）
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [viewingReportId, setViewingReportId] = useState<string | null>(null);
 
@@ -39,7 +49,8 @@ const TopicMining: React.FC = () => {
       <Title level={2}>话题挖掘</Title>
 
       <Tabs
-        defaultActiveKey="upload"
+        activeKey={activeTab}
+        onChange={setActiveTab}
         items={[
           {
             key: 'upload',

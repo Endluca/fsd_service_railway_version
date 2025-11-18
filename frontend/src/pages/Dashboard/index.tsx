@@ -13,9 +13,10 @@ import {
   Col,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import dayjs, { Dayjs } from 'dayjs';
+import type { Dayjs } from 'dayjs';
 import { queryDashboard, getGroups, getSales } from '../../services/api';
 import type { SalesData } from '../../types';
+import { useDashboardStore } from '../../stores/useDashboardStore';
 
 const { Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -81,19 +82,93 @@ const calculateSummaryStats = (salesData: SalesData[]): SummaryStatistics => {
   };
 };
 
+// 按小组聚合数据
+const aggregateByGroup = (salesData: SalesData[]): SalesData[] => {
+  if (salesData.length === 0) {
+    return [];
+  }
+
+  const groupMap = new Map<string, {
+    customerTurnCount: number;
+    timelyReplyCount: number;
+    overtimeReplyCount: number;
+    totalReplyDuration: number;
+    newRuleCustomerTurnCount: number;
+    overtimeReplyCountValue: number;
+    overtimeNoReplyCount: number;
+    conversationCount: number;
+  }>();
+
+  // 按小组聚合数据
+  for (const item of salesData) {
+    const group = item.groupName || '未分配小组';
+    if (!groupMap.has(group)) {
+      groupMap.set(group, {
+        customerTurnCount: 0,
+        timelyReplyCount: 0,
+        overtimeReplyCount: 0,
+        totalReplyDuration: 0,
+        newRuleCustomerTurnCount: 0,
+        overtimeReplyCountValue: 0,
+        overtimeNoReplyCount: 0,
+        conversationCount: 0,
+      });
+    }
+    const data = groupMap.get(group)!;
+    data.customerTurnCount += item.customerTurnCount;
+    // 通过百分比反推计数（会有精度损失，但可接受）
+    const timelyCount = (item.timelyReplyRate / 100) * item.customerTurnCount;
+    const overtimeCount = (item.overtimeReplyRate / 100) * item.customerTurnCount;
+    data.timelyReplyCount += timelyCount;
+    data.overtimeReplyCount += overtimeCount;
+    data.totalReplyDuration += item.avgReplyDuration * item.customerTurnCount;
+    data.newRuleCustomerTurnCount += item.newRuleCustomerTurnCount;
+    data.overtimeReplyCountValue += item.overtimeReplyCount;
+    data.overtimeNoReplyCount += item.overtimeNoReplyCount;
+    data.conversationCount += item.conversationCount;
+  }
+
+  // 转换为SalesData格式
+  return Array.from(groupMap.entries()).map(([groupName, data]) => ({
+    openUserId: `group_${groupName}`, // 使用特殊前缀作为唯一标识
+    name: '', // 小组汇总不显示CM
+    groupName,
+    customerTurnCount: data.customerTurnCount,
+    timelyReplyRate: data.customerTurnCount > 0
+      ? (data.timelyReplyCount / data.customerTurnCount) * 100
+      : 0,
+    overtimeReplyRate: data.customerTurnCount > 0
+      ? (data.overtimeReplyCount / data.customerTurnCount) * 100
+      : 0,
+    avgReplyDuration: data.customerTurnCount > 0
+      ? data.totalReplyDuration / data.customerTurnCount
+      : 0,
+    newRuleCustomerTurnCount: data.newRuleCustomerTurnCount,
+    overtimeReplyCount: data.overtimeReplyCountValue,
+    overtimeNoReplyCount: data.overtimeNoReplyCount,
+    conversationCount: data.conversationCount,
+  }));
+};
+
 const Dashboard: React.FC = () => {
-  // 状态管理
+  // 从store获取状态和actions
+  const {
+    dateRange,
+    selectedGroups,
+    selectedSales,
+    data,
+    pagination,
+    setDateRange,
+    setSelectedGroups,
+    setSelectedSales,
+    setData,
+    setPagination,
+  } = useDashboardStore();
+
+  // 本地状态（不需要持久化的状态）
   const [loading, setLoading] = useState(false);
-  const [dateRange, setDateRange] = useState<[Dayjs, Dayjs]>([
-    dayjs().subtract(10, 'days'),
-    dayjs(),
-  ]);
   const [groups, setGroups] = useState<string[]>([]);
-  const [salesList, setSalesList] = useState<{ openUserId: string; name: string }[]>([]);
-  const [selectedGroup, setSelectedGroup] = useState<string | undefined>();
-  const [selectedSales, setSelectedSales] = useState<string | undefined>();
-  const [data, setData] = useState<SalesData[]>([]);
-  const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
+  const [salesList, setSalesList] = useState<{ openUserId: string; name: string; groupName: string | null }[]>([]);
 
   // 加载小组列表
   useEffect(() => {
@@ -102,16 +177,16 @@ const Dashboard: React.FC = () => {
 
   // 当选择小组或日期范围改变时，加载该小组在该时间范围内有数据的销售列表
   useEffect(() => {
-    if (selectedGroup && dateRange && dateRange[0] && dateRange[1]) {
-      loadSales(selectedGroup, dateRange[0].format('YYYY-MM-DD'), dateRange[1].format('YYYY-MM-DD'));
-    } else if (selectedGroup) {
+    if (selectedGroups.length > 0 && dateRange && dateRange[0] && dateRange[1]) {
+      loadSales(selectedGroups, dateRange[0].format('YYYY-MM-DD'), dateRange[1].format('YYYY-MM-DD'));
+    } else if (selectedGroups.length > 0) {
       // 如果只选择了小组但没有日期，则加载该小组所有销售
-      loadSales(selectedGroup);
+      loadSales(selectedGroups);
     } else {
       setSalesList([]);
-      setSelectedSales(undefined);
+      setSelectedSales([]);
     }
-  }, [selectedGroup, dateRange]);
+  }, [selectedGroups, dateRange]);
 
   const loadGroups = async () => {
     try {
@@ -122,9 +197,9 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const loadSales = async (groupName?: string, startDate?: string, endDate?: string) => {
+  const loadSales = async (groupNames?: string[], startDate?: string, endDate?: string) => {
     try {
-      const sales = await getSales(groupName, startDate, endDate);
+      const sales = await getSales(groupNames, startDate, endDate);
       // 过滤掉无效数据并去重
       const uniqueSales = sales
         .filter((sale) => sale.openUserId && sale.openUserId.trim() !== '') // 确保有有效的 openUserId
@@ -135,8 +210,13 @@ const Dashboard: React.FC = () => {
       setSalesList(uniqueSales);
 
       // 如果当前选中的销售不在新列表中，清空选择
-      if (selectedSales && !uniqueSales.find((s) => s.openUserId === selectedSales)) {
-        setSelectedSales(undefined);
+      if (selectedSales.length > 0) {
+        const validSelectedSales = selectedSales.filter(saleId =>
+          uniqueSales.find(s => s.openUserId === saleId)
+        );
+        if (validSelectedSales.length !== selectedSales.length) {
+          setSelectedSales(validSelectedSales);
+        }
       }
     } catch (error) {
       message.error('加载销售列表失败');
@@ -156,13 +236,22 @@ const Dashboard: React.FC = () => {
       const params = {
         startDate: start.format('YYYY-MM-DD'),
         endDate: end.format('YYYY-MM-DD'),
-        groupName: selectedGroup,
-        openUserId: selectedSales,
+        groupNames: selectedGroups.length > 0 ? selectedGroups : undefined,
+        openUserIds: selectedSales.length > 0 ? selectedSales : undefined,
       };
 
       const result = await queryDashboard(params);
-      setData(result);
-      setPagination({ ...pagination, total: result.length, current: 1 });
+
+      // 如果未选择小组，则进行前端聚合，显示小组汇总数据
+      let finalData: SalesData[];
+      if (selectedGroups.length === 0) {
+        finalData = aggregateByGroup(result);
+      } else {
+        finalData = result;
+      }
+
+      setData(finalData);
+      setPagination({ ...pagination, total: finalData.length, current: 1 });
       message.success('查询成功');
     } catch (error: any) {
       message.error(error.message || '查询失败');
@@ -171,103 +260,115 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  // 表格列定义
-  const columns: ColumnsType<SalesData> = [
-    {
-      title: '小组',
-      dataIndex: 'groupName',
-      key: 'groupName',
-      width: 150,
-      sorter: (a, b) => (a.groupName || '').localeCompare(b.groupName || ''),
-      render: (text) => text || '-',
-    },
-    {
-      title: 'CM',
-      dataIndex: 'name',
-      key: 'name',
-      width: 150,
-      sorter: (a, b) => a.name.localeCompare(b.name),
-    },
-    {
-      title: '总消息数',
-      dataIndex: 'customerTurnCount',
-      key: 'customerTurnCount',
-      width: 120,
-      align: 'center',
-      sorter: (a, b) => a.customerTurnCount - b.customerTurnCount,
-    },
-    {
-      title: '新规则总消息数',
-      dataIndex: 'newRuleCustomerTurnCount',
-      key: 'newRuleCustomerTurnCount',
-      width: 150,
-      align: 'center',
-      sorter: (a, b) => a.newRuleCustomerTurnCount - b.newRuleCustomerTurnCount,
-    },
-    {
-      title: '超时回复数',
-      dataIndex: 'overtimeReplyCount',
-      key: 'overtimeReplyCount',
-      width: 120,
-      align: 'center',
-      sorter: (a, b) => a.overtimeReplyCount - b.overtimeReplyCount,
-    },
-    {
-      title: '超时未回复数',
-      dataIndex: 'overtimeNoReplyCount',
-      key: 'overtimeNoReplyCount',
-      width: 130,
-      align: 'center',
-      sorter: (a, b) => a.overtimeNoReplyCount - b.overtimeNoReplyCount,
-    },
-    {
-      title: '及时回复率',
-      dataIndex: 'timelyReplyRate',
-      key: 'timelyReplyRate',
-      width: 120,
-      align: 'center',
-      sorter: (a, b) => a.timelyReplyRate - b.timelyReplyRate,
-      render: (value: number) => (
-        <Tag color={value >= 80 ? 'success' : value >= 60 ? 'warning' : 'error'}>
-          {value.toFixed(2)}%
-        </Tag>
-      ),
-    },
-    {
-      title: '超时回复率',
-      dataIndex: 'overtimeReplyRate',
-      key: 'overtimeReplyRate',
-      width: 120,
-      align: 'center',
-      sorter: (a, b) => a.overtimeReplyRate - b.overtimeReplyRate,
-      render: (value: number) => (
-        <Tag color={value <= 20 ? 'success' : value <= 40 ? 'warning' : 'error'}>
-          {value.toFixed(2)}%
-        </Tag>
-      ),
-    },
-    {
-      title: '平均回复时长',
-      dataIndex: 'avgReplyDuration',
-      key: 'avgReplyDuration',
-      width: 150,
-      align: 'center',
-      sorter: (a, b) => a.avgReplyDuration - b.avgReplyDuration,
-      render: (value: number) => {
-        const hours = Math.floor(value / 60);
-        const minutes = Math.floor(value % 60);
-        return `${hours}:${minutes}分钟`;
+  // 动态表格列定义：根据是否选择小组来决定是否显示CM列
+  const getColumns = (showCMColumn: boolean): ColumnsType<SalesData> => {
+    const columns: ColumnsType<SalesData> = [
+      {
+        title: '小组',
+        dataIndex: 'groupName',
+        key: 'groupName',
+        width: 150,
+        sorter: (a, b) => (a.groupName || '').localeCompare(b.groupName || ''),
+        render: (text) => text || '-',
       },
-    },
-    {
-      title: '会话数',
-      dataIndex: 'conversationCount',
-      key: 'conversationCount',
-      width: 100,
-      align: 'center',
-      sorter: (a, b) => a.conversationCount - b.conversationCount,
-    },
-  ];
+    ];
+
+    // 如果选择了小组，则显示CM列
+    if (showCMColumn) {
+      columns.push({
+        title: 'CM',
+        dataIndex: 'name',
+        key: 'name',
+        width: 150,
+        sorter: (a, b) => a.name.localeCompare(b.name),
+      });
+    }
+
+    // 添加其他列
+    columns.push(
+      {
+        title: '总消息数',
+        dataIndex: 'customerTurnCount',
+        key: 'customerTurnCount',
+        width: 120,
+        align: 'center',
+        sorter: (a, b) => a.customerTurnCount - b.customerTurnCount,
+      },
+      {
+        title: '新规则总消息数',
+        dataIndex: 'newRuleCustomerTurnCount',
+        key: 'newRuleCustomerTurnCount',
+        width: 150,
+        align: 'center',
+        sorter: (a, b) => a.newRuleCustomerTurnCount - b.newRuleCustomerTurnCount,
+      },
+      {
+        title: '超时回复数',
+        dataIndex: 'overtimeReplyCount',
+        key: 'overtimeReplyCount',
+        width: 120,
+        align: 'center',
+        sorter: (a, b) => a.overtimeReplyCount - b.overtimeReplyCount,
+      },
+      {
+        title: '超时未回复数',
+        dataIndex: 'overtimeNoReplyCount',
+        key: 'overtimeNoReplyCount',
+        width: 130,
+        align: 'center',
+        sorter: (a, b) => a.overtimeNoReplyCount - b.overtimeNoReplyCount,
+      },
+      {
+        title: '及时回复率',
+        dataIndex: 'timelyReplyRate',
+        key: 'timelyReplyRate',
+        width: 120,
+        align: 'center',
+        sorter: (a, b) => a.timelyReplyRate - b.timelyReplyRate,
+        render: (value: number) => (
+          <Tag color={value >= 80 ? 'success' : value >= 60 ? 'warning' : 'error'}>
+            {value.toFixed(2)}%
+          </Tag>
+        ),
+      },
+      {
+        title: '超时回复率',
+        dataIndex: 'overtimeReplyRate',
+        key: 'overtimeReplyRate',
+        width: 120,
+        align: 'center',
+        sorter: (a, b) => a.overtimeReplyRate - b.overtimeReplyRate,
+        render: (value: number) => (
+          <Tag color={value <= 20 ? 'success' : value <= 40 ? 'warning' : 'error'}>
+            {value.toFixed(2)}%
+          </Tag>
+        ),
+      },
+      {
+        title: '平均回复时长',
+        dataIndex: 'avgReplyDuration',
+        key: 'avgReplyDuration',
+        width: 150,
+        align: 'center',
+        sorter: (a, b) => a.avgReplyDuration - b.avgReplyDuration,
+        render: (value: number) => {
+          const hours = Math.floor(value / 60);
+          const minutes = Math.floor(value % 60);
+          return `${hours}:${minutes}分钟`;
+        },
+      },
+      {
+        title: '会话数',
+        dataIndex: 'conversationCount',
+        key: 'conversationCount',
+        width: 100,
+        align: 'center',
+        sorter: (a, b) => a.conversationCount - b.conversationCount,
+      }
+    );
+
+    return columns;
+  };
 
   return (
     <div style={{ background: '#fff', padding: '24px', borderRadius: '8px' }}>
@@ -286,14 +387,13 @@ const Dashboard: React.FC = () => {
           <Text>小组:</Text>
           <Select
             placeholder="全部小组"
-            style={{ width: 200 }}
+            style={{ width: 300 }}
+            mode="multiple"
             allowClear
-            value={selectedGroup}
-            onChange={setSelectedGroup}
-            options={[
-              { label: '全部小组', value: undefined },
-              ...groups.map((g) => ({ label: g, value: g })),
-            ]}
+            value={selectedGroups}
+            onChange={setSelectedGroups}
+            options={groups.map((g) => ({ label: g, value: g }))}
+            maxTagCount="responsive"
           />
         </Space>
 
@@ -301,29 +401,17 @@ const Dashboard: React.FC = () => {
           <Text>销售BCM:</Text>
           <Select
             placeholder="全部BCM"
-            style={{ width: 200 }}
+            style={{ width: 300 }}
+            mode="multiple"
             allowClear
             value={selectedSales}
             onChange={setSelectedSales}
-            disabled={!selectedGroup}
-            options={[
-              { label: '全部BCM', value: undefined },
-              ...(() => {
-                // 检测重复的名字
-                const nameCount = new Map<string, number>();
-                salesList.forEach((s) => {
-                  nameCount.set(s.name, (nameCount.get(s.name) || 0) + 1);
-                });
-
-                // 为重复的名字添加 openUserId 后缀
-                return salesList.map((s) => ({
-                  label: nameCount.get(s.name)! > 1
-                    ? `${s.name} (${s.openUserId.slice(-6)})`
-                    : s.name,
-                  value: s.openUserId,
-                }));
-              })(),
-            ]}
+            disabled={selectedGroups.length === 0}
+            options={salesList.map((s) => ({
+              label: `${s.name} (${s.groupName || '未分配'})`,
+              value: s.openUserId,
+            }))}
+            maxTagCount="responsive"
           />
         </Space>
 
@@ -430,7 +518,7 @@ const Dashboard: React.FC = () => {
 
       {/* 数据表格 */}
       <Table
-        columns={columns}
+        columns={getColumns(selectedGroups.length > 0)}
         dataSource={data}
         rowKey="openUserId"
         loading={loading}

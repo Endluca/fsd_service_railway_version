@@ -29,8 +29,8 @@ export interface Sales {
 export interface QueryParams {
   startDate: string;
   endDate: string;
-  groupName?: string;
-  openUserId?: string;
+  groupNames?: string[];
+  openUserIds?: string[];
 }
 
 // 趋势数据相关类型
