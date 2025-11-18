@@ -1,8 +1,15 @@
 import axios from 'axios';
 import type { SalesData, QueryParams, TrendQueryParams, TrendResponse, DateRange } from '../types';
 
+// 根据环境使用不同的 API 地址
+// 开发环境：使用相对路径 /api（通过 Vite proxy 转发）
+// 生产环境：使用环境变量配置的完整 URL
+const baseURL = import.meta.env.VITE_API_BASE_URL
+  ? `${import.meta.env.VITE_API_BASE_URL}/api`
+  : '/api';
+
 const client = axios.create({
-  baseURL: '/api',
+  baseURL,
   timeout: 30000,
 });
 

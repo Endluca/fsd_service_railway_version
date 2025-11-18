@@ -12,12 +12,16 @@ export default defineConfig({
       '.ngrok.app',
       '.trycloudflare.com',
     ],
-    // ... existing code ...
     proxy: {
       '/api': {
-        target: 'http://localhost:3005',
+        // 开发环境使用本地后端，生产环境构建后不使用 proxy
+        target: process.env.VITE_API_BASE_URL || 'http://localhost:3005',
         changeOrigin: true,
       }
     }
+  },
+  build: {
+    outDir: 'dist',
+    sourcemap: false,
   }
 })
