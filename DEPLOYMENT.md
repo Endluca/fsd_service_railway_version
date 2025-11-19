@@ -14,8 +14,8 @@
 ### 步骤 1：创建 Railway 项目
 
 > ⚠️ **重要提示：请勿使用自动检测模式创建项目**
-> 本项目是 monorepo 结构（包含 backend 和 frontend 两个服务），在点击 "Deploy from GitHub repo" 时，Railway 会自动尝试检测项目类型并尝试部署第一个服务，这将导致构建失败。
-> 正确的方法是：创建空项目后，手动添加数据库和后端/前端服务。
+> 本项目是 monorepo 结构（包含 backend 和 frontend 两个服务），在点击 "Deploy from GitHub repo" 时，Railway 会自动尝试检测项目类型并尝试部署第一个服务，这将导致 "Nixpacks/Railpack unable to generate build plan" 错误。
+> 正确的方法是：先创建空项目，然后手动添加数据库和后端/前端服务。
 
 #### 1.1 创建空项目
 
@@ -36,18 +36,29 @@
 
 项目成功创建后，你应该拥有一个空项目，其中只包含一个 PostgreSQL 服务，还没有后端或前端服务。这就是正确状态。
 
-> 💡 **为什么忽略自动检测？**
-> - 自动检测会尝试构建根目录，但根目录没有 package.json
-> - Nixpacks/Railpack 会检测到 backend/ 和 frontend/ 两个目录，无法决定构建哪个
-> - 手动创建服务可以明确指定每个服务的根目录，避免构建计划错误
+> 💡 **为什么自动检测会失败？**
+> - 根目录没有 package.json，无法识别为 Node.js 项目
+> - Nixpacks/Railpack 检测到 backend/ 和 frontend/ 两个目录，无法决定构建哪个
+> - 必须手动指定每个服务的 Root Directory
 
-### 步骤 2：添加 PostgreSQL 数据库
+### 步骤 2：创建后端服务
 
-1. 在项目中点击 **"+ New"**
-2. 选择 **"Database"** → **"PostgreSQL"**
-3. Railway 会自动创建数据库并生成 `DATABASE_URL` 环境变量
+> ✅ **数据库已在步骤 1.2 创建完成**，现在添加后端服务并将其绑定到数据库
 
-> ⚠️ **重要**：记下数据库服务的名称（默认为 `Postgres`），后端服务需要引用它的环境变量。
+#### 2.1 配置服务
+1. 点击 **"+ New"** → **"GitHub Repo"**
+2. 选择仓库和分支（`main`）
+3. 配置以下设置：
+
+   **Service Name**: `backend`
+
+   **Settings → General**:
+   - **Root Directory**: `backend`
+   - **Watch Paths**: `backend/**`
+
+   **Settings → Deploy**:
+   - **Build Command**: 留空（使用 package.json 的 build）
+   - **Start Command**: `npx prisma migrate deploy && node dist/index.js`
 
 #### 2.2 配置环境变量
 
@@ -88,22 +99,22 @@
    - **Build Command**: 留空（使用 package.json 的 build）
    - **Start Command**: 留空（Railway 自动识别静态文件）
 
-#### 4.2 配置环境变量
+#### 3.2 配置环境变量
 
 在 **Variables** 标签页添加：
 
 | 变量名 | 值 | 说明 |
 |--------|-----|------|
-| `VITE_API_BASE_URL` | `https://backend-production-xxxx.up.railway.app` | 后端服务域名（步骤 3.3 中记录的） |
+| `VITE_API_BASE_URL` | `https://backend-production-xxxx.up.railway.app` | 后端服务域名（步骤 2.3 中记录的） |
 
-> ⚠️ **重要**：确保使用步骤 3.3 中生成的后端域名。
+> ⚠️ **重要**：确保使用步骤 2.3 中生成的后端域名。
 
-#### 4.3 生成公共域名
+#### 3.3 生成公共域名
 1. 进入 **Settings → Networking**
 2. 点击 **"Generate Domain"**
 3. 记下生成的域名（例如：`https://frontend-production-xxxx.up.railway.app`）
 
-### 步骤 5：更新后端 CORS 配置
+### 步骤 4：更新后端 CORS 配置
 
 1. 回到 **后端服务** 的 Variables 标签页
 2. 更新 `ALLOWED_ORIGINS` 环境变量：
@@ -113,6 +124,65 @@
    （使用步骤 4.3 中生成的前端域名）
 
 3. 保存后，后端服务会自动重新部署
+
+## ✅ 验证部署
+
+### 4.1 检查后端服务
+
+1. **查看部署日志**
+   - 进入后端服务的 **Deployments** 标签页
+   - 查看最新部署的日志
+   - 确认看到以下成功信息：
+     ```
+     ✓ 配置验证通过
+     ✓ 认证服务初始化完成
+     ✓ 数据采集服务初始化完成
+     ✓ Web服务器已启动
+     ✓ 定时任务已启动
+     ✓ 系统启动完成！
+     ```
+
+2. **测试 API 端点**
+   - 访问：`https://your-backend.railway.app/api/groups`
+   - 应该返回 JSON 数据（如果有数据）或空数组
+
+### 4.2 检查前端服务
+
+1. **访问前端页面**
+   - 访问：`https://your-frontend.railway.app`
+   - 页面应该正常加载
+
+2. **测试前后端通信**
+   - 打开浏览器开发者工具（F12）
+   - 切换到 **Network** 标签页
+   - 在前端页面操作，查看 API 请求
+   - 确认请求成功且没有 CORS 错误
+
+### 4.3 检查数据库
+
+1. **查看 Prisma 迁移**
+   - 在后端服务日志中搜索 "Prisma Migrate"
+   - 确认看到迁移成功信息
+
+2. **使用 Prisma Studio（可选）**
+   - 在本地项目中配置 Railway 数据库 URL
+   - 运行 `npm run prisma:studio`
+   - 查看数据库表结构
+
+### 4.4 测试核心功能
+
+1. **手动触发数据采集**
+   - 使用 API 工具（如 Postman）或 curl：
+     ```bash
+     curl -X POST https://your-backend.railway.app/api/collect \
+       -H "Content-Type: application/json" \
+       -d '{}'
+     ```
+   - 查看后端日志，确认数据采集流程正常
+
+2. **查看定时任务**
+   - 等待到北京时间 5:00（或修改 CRON_SCHEDULE 测试）
+   - 查看后端日志，确认定时任务自动执行
 
 ## ⚠️ 常见问题: Error creating build plan with Railpack
 
@@ -169,7 +239,7 @@
 
 4. **如果仍然失败，尝试手动配置服务**：
    - 创建空项目后，点击 "+ New" → "GitHub Repo"
-   - 手动配置每个服务（跳过自动检测阶段）
+- 手动配置每个服务（跳过自动检测阶段）
 
 > ⚠️ **重要提示**：创建项目后，Railway 可能会自动尝试部署第一个服务。如果失败，可以忽略此错误，继续手动添加 PostgreSQL 数据库和后端/前端服务（按照步骤 2-4）。
 
