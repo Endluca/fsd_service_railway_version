@@ -2,5 +2,20 @@
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
     "builder": "nixpacks"
-  }
+  },
+  "services": [
+    {
+      "name": "backend",
+      "path": "backend",
+      "startCommand": "npm run prisma:deploy && node dist/index.js",
+      "port": 3005
+    },
+    {
+      "name": "frontend",
+      "path": "frontend",
+      "startCommand": "npm run preview -- --host 0.0.0.0 --port $PORT",
+      "port": 4173,
+      "public": true
+    }
+  ]
 }
