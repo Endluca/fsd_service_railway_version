@@ -109,6 +109,67 @@
 
 3. 保存后，后端服务会自动重新部署
 
+## ⚠️ 常见问题: Error creating build plan with Railpack
+
+**症状**：在步骤1创建项目时，Railway 显示 "Error creating build plan with Railpack" 错误
+
+**原因**：
+- 项目结构为 monorepo（包含 backend 和 frontend 两个目录）
+- 根目录缺少 `railway.json` 配置文件，Railway 无法自动识别项目类型
+
+**解决方案**：
+
+1. **确保配置文件已存在**
+   检查项目根目录是否包含以下文件：
+   - `railway.json` - 引导 Railway 使用 Nixpacks 构建器
+   - `backend/nixpacks.toml` - backend 服务构建配置
+
+2. **如果文件不存在，请创建一个**：
+
+   创建 `railway.json`：
+   ```json
+   {
+     "$schema": "https://railway.app/railway.schema.json",
+     "build": {
+       "builder": "nixpacks"
+     }
+   }
+   ```
+
+   创建 `backend/nixpacks.toml`：
+   ```toml
+   [phases.setup]
+   nixPkgs = ["nodejs_20", "npm"]
+
+   [phases.build]
+   cmds = [
+     "npm ci",
+     "npm run build",
+     "npm run prisma:generate"
+   ]
+   dependsOn = ["setup"]
+
+   [start]
+   cmd = "npm run prisma:deploy && npm start"
+
+   [[services]]
+   name = "backend"
+   directories = ["backend"]
+   ```
+
+3. **删除并重新创建 Railway 项目**
+   - 在 Railway 控制台删除失败的项目
+   - 重新点击 "New Project" → "Deploy from GitHub repo"
+   - 选择仓库后等待 Railway 自动检测（这一步不应该再报错）
+
+4. **如果仍然失败，尝试手动配置服务**：
+   - 创建空项目后，点击 "+ New" → "GitHub Repo"
+   - 手动配置每个服务（跳过自动检测阶段）
+
+> ⚠️ **重要提示**：创建项目后，Railway 可能会自动尝试部署第一个服务。如果失败，可以忽略此错误，继续手动添加 PostgreSQL 数据库和后端/前端服务（按照步骤 2-4）。
+
+---
+
 ## ✅ 验证部署
 
 ### 5.1 检查后端服务
@@ -211,6 +272,23 @@
 2. 查看后端日志，确认看到 "定时任务已启动"
 3. 验证 node-cron 表达式是否正确
 4. 手动触发一次数据采集测试功能是否正常
+
+### 问题 6：Railpack 构建计划错误
+
+**症状**：Railway 显示 "Error creating build plan with Railpack"
+
+**原因**：
+1. Monorepo 结构未被正确识别
+2. 缺少 `railway.json` 或 `nixpacks.toml` 配置文件
+3. Git 仓库未推送到 GitHub
+
+**解决方案**：
+1. 检查 [常见问题: Error creating build plan with Railpack](#-常见问题-error-creating-build-plan-with-railpack) 章节
+2. 确保所有配置文件已提交到 Git
+3. 删除并重新创建 Railway 项目
+4. 使用手动配置方式添加服务
+
+---
 
 ### 问题 5：构建超时或失败
 
