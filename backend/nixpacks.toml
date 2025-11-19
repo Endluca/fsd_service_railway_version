@@ -11,7 +11,3 @@ dependsOn = ["setup"]
 
 [start]
 cmd = "npm run prisma:deploy && npm start"
-
-[[services]]
-name = "backend"
-directories = ["backend"]
