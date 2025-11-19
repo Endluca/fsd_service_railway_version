@@ -13,11 +13,33 @@
 
 ### 步骤 1：创建 Railway 项目
 
+> ⚠️ **重要提示：请勿使用自动检测模式创建项目**
+> 本项目是 monorepo 结构（包含 backend 和 frontend 两个服务），在点击 "Deploy from GitHub repo" 时，Railway 会自动尝试检测项目类型并尝试部署第一个服务，这将导致构建失败。
+> 正确的方法是：创建空项目后，手动添加数据库和后端/前端服务。
+
+#### 1.1 创建空项目
+
 1. 访问 [Railway.app](https://railway.app)
 2. 点击 **"New Project"**
-3. 选择 **"Deploy from GitHub repo"**
-4. 选择仓库：`Endluca/fsd_service_railway_version`
-5. Railway 会自动识别项目结构
+3. 选择 **"Empty Project"**
+4. 为项目命名（例如：`fsd-dashboard`）
+
+#### 1.2 手动添加 PostgreSQL 数据库
+
+> ⚠️ **必须先创建数据库，因为后端服务依赖于它**
+
+1. 在项目中点击 **"+ New"**
+2. 选择 **"Database"** → **"PostgreSQL"**
+3. Railway 会自动创建数据库服务（默认名称为 `Postgres`）
+
+#### 1.3 验证项目结构
+
+项目成功创建后，你应该拥有一个空项目，其中只包含一个 PostgreSQL 服务，还没有后端或前端服务。这就是正确状态。
+
+> 💡 **为什么忽略自动检测？**
+> - 自动检测会尝试构建根目录，但根目录没有 package.json
+> - Nixpacks/Railpack 会检测到 backend/ 和 frontend/ 两个目录，无法决定构建哪个
+> - 手动创建服务可以明确指定每个服务的根目录，避免构建计划错误
 
 ### 步骤 2：添加 PostgreSQL 数据库
 
@@ -27,24 +49,7 @@
 
 > ⚠️ **重要**：记下数据库服务的名称（默认为 `Postgres`），后端服务需要引用它的环境变量。
 
-### 步骤 3：创建后端服务
-
-#### 3.1 配置服务
-1. 点击 **"+ New"** → **"GitHub Repo"**
-2. 选择仓库和分支（`main`）
-3. 配置以下设置：
-
-   **Service Name**: `backend`
-
-   **Settings → General**:
-   - **Root Directory**: `backend`
-   - **Watch Paths**: `backend/**`
-
-   **Settings → Deploy**:
-   - **Build Command**: 留空（使用 package.json 的 build）
-   - **Start Command**: `npx prisma migrate deploy && node dist/index.js`
-
-#### 3.2 配置环境变量
+#### 2.2 配置环境变量
 
 在 **Variables** 标签页添加以下环境变量：
 
@@ -62,14 +67,14 @@
 
 > 📝 **注意**：`ALLOWED_ORIGINS` 暂时留空，待前端服务创建后再填写。
 
-#### 3.3 生成公共域名
+#### 2.3 生成公共域名
 1. 进入 **Settings → Networking**
 2. 点击 **"Generate Domain"**
 3. 记下生成的域名（例如：`https://backend-production-xxxx.up.railway.app`）
 
-### 步骤 4：创建前端服务
+### 步骤 3：创建前端服务
 
-#### 4.1 配置服务
+#### 3.1 配置服务
 1. 点击 **"+ New"** → **"GitHub Repo"**（选择同一个仓库）
 2. 配置以下设置：
 
