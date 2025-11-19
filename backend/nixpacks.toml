@@ -1,0 +1,17 @@
+[phases.setup]
+nixPkgs = ["nodejs_20", "npm"]
+
+[phases.build]
+cmds = [
+  "npm ci",
+  "npm run build",
+  "npm run prisma:generate"
+]
+dependsOn = ["setup"]
+
+[start]
+cmd = "npm run prisma:deploy && npm start"
+
+[[services]]
+name = "backend"
+directories = ["backend"]
