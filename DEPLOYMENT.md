@@ -426,6 +426,188 @@
 
 ---
 
+## 🆘 错误 502 和 "Application failed to respond" 排查
+
+### 问题症状
+
+部署后出现以下错误：
+
+1. **后端返回 404**: 访问根路径 `/` 显示 `{"code":404,"message":"Not Found"}`
+2. **前端返回 502**: 页面显示 "Application failed to respond"
+3. **HTTP Logs 显示**: "connection refused" 错误
+
+### 问题诊断
+
+#### 后端 404 - ✅ 这是正常的！
+
+**原因**: 后端只提供 API 端点，所有路由都在 `/api` 路径下。访问根路径 `/` 返回 404 是预期行为。
+
+**验证方法**:
+```bash
+# ❌ 错误：访问根路径会返回404
+https://your-backend.railway.app/
+
+# ✅ 正确：访问API端点
+https://your-backend.railway.app/api/health
+```
+
+预期响应：
+```json
+{
+  "code": 0,
+  "message": "OK",
+  "data": {
+    "status": "healthy",
+    "timestamp": "2025-11-20T03:50:00.000Z"
+  }
+}
+```
+
+#### 前端 502 - ❌ 需要修复！
+
+**最可能的原因**:
+
+1. **前端构建命令缺失或错误**
+   - Railway 需要先运行 `npm run build` 构建前端
+   - 如果没有配置 Build Command，前端无法正常启动
+
+2. **环境变量 `VITE_API_BASE_URL` 未设置**
+   - 前端代码需要这个变量来知道后端API地址
+   - 缺少此变量会导致前端无法连接后端
+
+3. **启动命令端口配置错误**
+   - 必须使用 `$PORT` 环境变量（Railway 动态分配）
+   - 不能硬编码端口号（如 4173）
+
+### 解决步骤
+
+#### 方法 1: 检查前端 Build 配置
+
+1. 进入前端服务 → **Settings** 标签
+2. 滚动到 **Build** 区块
+3. 确认 **Build Command** 设置为：
+   ```
+   npm run build
+   ```
+4. 如果为空或错误，更新后保存
+
+#### 方法 2: 检查前端 Deploy 配置
+
+1. 在 Settings 页面，滚动到 **Deploy** 区块
+2. 确认 **Start Command** 设置为：
+   ```
+   npm run preview -- --host 0.0.0.0 --port $PORT
+   ```
+3. 注意必须使用 `$PORT` 变量，不要硬编码端口号
+
+#### 方法 3: 检查环境变量
+
+1. 点击前端服务的 **Variables** 标签页
+2. 确认存在 `VITE_API_BASE_URL` 环境变量
+3. 值应该是后端的完整 URL（例如: `https://backend-production-xxxx.up.railway.app`）
+4. **不要**在末尾添加 `/api`（代码会自动添加）
+
+#### 方法 4: 重新部署
+
+环境变量修改后，必须重新构建才能生效：
+
+1. 在前端服务页面，找到最新的 Deployment
+2. 点击右侧的 **⋮** 菜单
+3. 选择 **"Redeploy"**
+4. 等待构建和部署完成（2-5分钟）
+
+### 验证修复
+
+#### 1. 检查 Build Logs
+
+在 **Deployments** 标签页，查看 Build Logs：
+
+✅ 应该看到：
+```
+> bashboard-frontend@1.0.0 build
+> tsc && vite build
+
+vite v5.0.8 building for production...
+✓ built in 15.42s
+```
+
+❌ 不应该看到：
+- 任何 TypeScript 编译错误
+- "command not found" 错误
+- 构建失败消息
+
+#### 2. 检查 Deploy Logs
+
+在同一页面，查看 Deploy Logs：
+
+✅ 应该看到：
+```
+> bashboard-frontend@1.0.0 preview
+> vite preview --host 0.0.0.0 --port 3000
+
+  ➜  Local:   http://localhost:3000/
+  ➜  Network: http://0.0.0.0:3000/
+```
+
+❌ 不应该看到：
+- "EADDRINUSE" (端口被占用)
+- "Cannot read package.json"
+- 启动失败错误
+
+#### 3. 测试前端页面
+
+访问前端域名：`https://your-frontend.railway.app`
+
+✅ 应该：
+- 页面正常加载
+- 看到应用界面（不是空白页）
+- 浏览器 Console 没有报错
+
+❌ 不应该：
+- 看到 "Application failed to respond"
+- 页面完全空白
+- 502 Bad Gateway 错误
+
+#### 4. 测试前后端通信
+
+打开浏览器开发者工具（F12），切换到 **Network** 标签页：
+
+✅ 应该看到：
+- 对 `/api/groups`、`/api/sales` 等的请求
+- 请求状态码为 200
+- 响应包含 JSON 数据
+
+❌ 不应该看到：
+- CORS 错误（"blocked by CORS policy"）
+- 502 错误
+- "connection refused"
+
+### 如果问题仍未解决
+
+如果按照上述步骤操作后问题仍然存在，请：
+
+1. **删除并重建前端服务**:
+   - 在 Railway 项目 Canvas 中，删除前端服务
+   - 按照[Railway 手动配置指南]重新创建
+
+2. **检查 railway.json**:
+   - 如果项目根目录存在 `railway.json`
+   - 可能与手动配置冲突
+   - 考虑删除此文件，完全使用 Railway 控制台配置
+
+3. **查看完整日志**:
+   - 在 Railway 控制台，点击服务 → Deployments
+   - 展开完整的 Build 和 Deploy 日志
+   - 查找任何红色的错误消息
+
+4. **联系支持**:
+   - 如果上述方法都无法解决
+   - 可以在 Railway Discord 社区寻求帮助
+   - 提供完整的错误日志和配置截图
+
+---
+
 **部署完成！** 🎉
 
 如有问题，请查看 [常见问题排查](#-常见问题排查) 或联系技术支持。
+

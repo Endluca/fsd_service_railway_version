@@ -7,11 +7,7 @@ export default defineConfig({
   server: {
     port: 5175,
     host: true,
-    allowedHosts: [
-      '.ngrok-free.dev',
-      '.ngrok.app',
-      '.trycloudflare.com',
-    ],
+    allowedHosts: true,
     proxy: {
       '/api': {
         // 开发环境使用本地后端，生产环境构建后不使用 proxy
