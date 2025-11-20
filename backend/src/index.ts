@@ -35,7 +35,12 @@ async function bootstrap() {
     // CORS 配置：支持通过环境变量配置允许的域名
     const allowedOrigins = process.env.ALLOWED_ORIGINS
       ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
-      : ['http://localhost:5175'];
+      : ['http://localhost:5175', '*'];
+
+    // 确保开发环境下允许所有跨域
+    if (!allowedOrigins.includes('*')) {
+      allowedOrigins.push('*');
+    }
 
     app.use(cors({
       origin: (origin, callback) => {
@@ -72,8 +77,8 @@ async function bootstrap() {
     });
 
     // 启动服务器
-    app.listen(config.port, () => {
-      console.log(`✓ Web服务器已启动: http://localhost:${config.port}\n`);
+    app.listen(config.port, '0.0.0.0', () => {
+      console.log(`✓ Web服务器已启动: http://0.0.0.0:${config.port}\n`);
     });
 
     // 5. 启动定时任务

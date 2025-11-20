@@ -9,6 +9,51 @@
 - **服务 2**：后端服务（Node.js + Express + Prisma）
 - **服务 3**：前端服务（React + Vite）
 
+## 📍 Railway 界面导航指南
+
+> 💡 **提示**：Railway 在 2024 年更新了界面设计。如果您发现实际界面与某些教程不同，请以本章节的说明为准。
+
+### 主要界面元素
+
+**项目 Canvas**（Project Canvas）
+- 位置：登录后的主要工作区域
+- 功能：显示所有服务、数据库、环境
+- 操作：点击服务卡片进入服务详情
+
+**添加新服务**
+- 按钮位置：项目 Canvas 右上角的 **"Create"** 按钮（或显示为 "New"）
+- 快捷键：`CMD + K`（Mac）或 `Ctrl + K`（Windows），然后输入 "new service"
+- 选项：GitHub Repo、Empty Service、Database 等
+
+**服务详情页标签**（与 Settings 并列的顶级标签）
+- **Deployments**：查看部署历史和日志
+- **Variables**：配置环境变量
+- **Settings**：服务配置（单页滚动设计）
+- **Metrics**：性能监控
+- **Logs**：实时日志
+
+### Settings 页面结构
+
+**重要**：Settings 采用**单页滚动设计**，不再分多个标签页。所有配置项分布在不同的**区块**（Sections）中：
+
+1. **Source 区块**
+   - 功能：连接 GitHub 仓库或 Docker 镜像
+   - 位置：Settings 页面顶部
+
+2. **Build 区块**
+   - 配置项：Root Directory、Watch Paths、Custom Build Command
+   - 位置：Settings 页面中部
+
+3. **Deploy 区块**
+   - 配置项：Custom Start Command、Deployment Region
+   - 位置：Settings 页面中下部
+
+4. **Networking 区块**
+   - 配置项：Public Networking（Generate Domain）、Custom Domains
+   - 位置：Settings 页面下部
+
+**访问方式**：点击服务卡片 → 点击 "Settings" 标签 → 滚动到相应区块
+
 ## 🚀 部署步骤
 
 ### 步骤 1：创建 Railway 项目
@@ -28,7 +73,7 @@
 
 > ⚠️ **必须先创建数据库，因为后端服务依赖于它**
 
-1. 在项目中点击 **"+ New"**
+1. 在项目 Canvas 中点击 **"Create"** 按钮（或 "New"）
 2. 选择 **"Database"** → **"PostgreSQL"**
 3. Railway 会自动创建数据库服务（默认名称为 `Postgres`）
 
@@ -46,18 +91,24 @@
 > ✅ **数据库已在步骤 1.2 创建完成**，现在添加后端服务并将其绑定到数据库
 
 #### 2.1 配置服务
-1. 点击 **"+ New"** → **"GitHub Repo"**
+1. 点击项目 Canvas 右上角的 **"Create"** 按钮（或 "New"）→ **"GitHub Repo"**
+   > 💡 **快捷方式**：也可以使用 `CMD + K`（Mac）或 `Ctrl + K`（Windows）快捷键
 2. 选择仓库和分支（`main`）
-3. 配置以下设置：
+3. 服务创建后，进入服务详情页，点击 **"Settings"** 标签
+4. 滚动并配置以下设置：
 
    **Service Name**: `backend`
 
-   **Settings → General**:
+   **在 Build 区块中**：
    - **Root Directory**: `backend`
    - **Watch Paths**: `backend/**`
+   - **Build Command**: 留空（使用 package.json 的 build 脚本）
 
-   **Settings → Deploy**:
-   - **Build Command**: 留空（使用 package.json 的 build）
+   > ⚠️ **Watch Paths 重要说明**：
+   > Watch Paths 必须使用**绝对路径**（从项目根目录 `/` 开始）。
+   > 即使设置了 Root Directory 为 `backend`，Watch Paths 仍需写成 `backend/**`，而不是 `**` 或 `**/*`。
+
+   **在 Deploy 区块中**：
    - **Start Command**: `npx prisma migrate deploy && node dist/index.js`
 
 #### 2.2 配置环境变量
@@ -79,25 +130,33 @@
 > 📝 **注意**：`ALLOWED_ORIGINS` 暂时留空，待前端服务创建后再填写。
 
 #### 2.3 生成公共域名
-1. 进入 **Settings → Networking**
-2. 点击 **"Generate Domain"**
-3. 记下生成的域名（例如：`https://backend-production-xxxx.up.railway.app`）
+1. 在后端服务详情页，点击 **"Settings"** 标签
+2. 滚动到页面下方的 **"Networking"** 区块
+3. 在 **"Public Networking"** 子区域中，点击 **"Generate Domain"** 按钮
+4. 记下生成的域名（例如：`https://backend-production-xxxx.up.railway.app`）
+
+> 💡 **提示**：Railway 默认不会自动生成域名，需要手动触发。生成后可能需要几秒钟等待 DNS 传播。
 
 ### 步骤 3：创建前端服务
 
 #### 3.1 配置服务
-1. 点击 **"+ New"** → **"GitHub Repo"**（选择同一个仓库）
-2. 配置以下设置：
+1. 点击项目 Canvas 右上角的 **"Create"** 按钮（或 "New"）→ **"GitHub Repo"**
+2. 选择同一个仓库和分支（`main`）
+3. 服务创建后，进入服务详情页，点击 **"Settings"** 标签
+4. 滚动并配置以下设置：
 
    **Service Name**: `frontend`
 
-   **Settings → General**:
+   **在 Build 区块中**：
    - **Root Directory**: `frontend`
    - **Watch Paths**: `frontend/**`
+   - **Build Command**: 留空（使用 package.json 的 build 脚本）
 
-   **Settings → Deploy**:
-   - **Build Command**: 留空（使用 package.json 的 build）
-   - **Start Command**: 留空（Railway 自动识别静态文件）
+   > ⚠️ **Watch Paths 重要说明**：
+   > 必须使用绝对路径 `frontend/**`，而不是 `**` 或 `**/*`。
+
+   **在 Deploy 区块中**：
+   - **Start Command**: 留空（Railway 自动识别 Vite 构建的静态文件）
 
 #### 3.2 配置环境变量
 
@@ -110,9 +169,10 @@
 > ⚠️ **重要**：确保使用步骤 2.3 中生成的后端域名。
 
 #### 3.3 生成公共域名
-1. 进入 **Settings → Networking**
-2. 点击 **"Generate Domain"**
-3. 记下生成的域名（例如：`https://frontend-production-xxxx.up.railway.app`）
+1. 在前端服务详情页，点击 **"Settings"** 标签
+2. 滚动到页面下方的 **"Networking"** 区块
+3. 在 **"Public Networking"** 子区域中，点击 **"Generate Domain"** 按钮
+4. 记下生成的域名（例如：`https://frontend-production-xxxx.up.railway.app`）
 
 ### 步骤 4：更新后端 CORS 配置
 
@@ -121,68 +181,9 @@
    ```
    https://frontend-production-xxxx.up.railway.app,http://localhost:5175
    ```
-   （使用步骤 4.3 中生成的前端域名）
+   （使用步骤 3.3 中生成的前端域名）
 
 3. 保存后，后端服务会自动重新部署
-
-## ✅ 验证部署
-
-### 4.1 检查后端服务
-
-1. **查看部署日志**
-   - 进入后端服务的 **Deployments** 标签页
-   - 查看最新部署的日志
-   - 确认看到以下成功信息：
-     ```
-     ✓ 配置验证通过
-     ✓ 认证服务初始化完成
-     ✓ 数据采集服务初始化完成
-     ✓ Web服务器已启动
-     ✓ 定时任务已启动
-     ✓ 系统启动完成！
-     ```
-
-2. **测试 API 端点**
-   - 访问：`https://your-backend.railway.app/api/groups`
-   - 应该返回 JSON 数据（如果有数据）或空数组
-
-### 4.2 检查前端服务
-
-1. **访问前端页面**
-   - 访问：`https://your-frontend.railway.app`
-   - 页面应该正常加载
-
-2. **测试前后端通信**
-   - 打开浏览器开发者工具（F12）
-   - 切换到 **Network** 标签页
-   - 在前端页面操作，查看 API 请求
-   - 确认请求成功且没有 CORS 错误
-
-### 4.3 检查数据库
-
-1. **查看 Prisma 迁移**
-   - 在后端服务日志中搜索 "Prisma Migrate"
-   - 确认看到迁移成功信息
-
-2. **使用 Prisma Studio（可选）**
-   - 在本地项目中配置 Railway 数据库 URL
-   - 运行 `npm run prisma:studio`
-   - 查看数据库表结构
-
-### 4.4 测试核心功能
-
-1. **手动触发数据采集**
-   - 使用 API 工具（如 Postman）或 curl：
-     ```bash
-     curl -X POST https://your-backend.railway.app/api/collect \
-       -H "Content-Type: application/json" \
-       -d '{}'
-     ```
-   - 查看后端日志，确认数据采集流程正常
-
-2. **查看定时任务**
-   - 等待到北京时间 5:00（或修改 CRON_SCHEDULE 测试）
-   - 查看后端日志，确认定时任务自动执行
 
 ## ⚠️ 常见问题: Error creating build plan with Railpack
 
@@ -225,7 +226,7 @@
    dependsOn = ["setup"]
 
    [start]
-   cmd = "npm run prisma:deploy && npm start"
+   cmd = "npx prisma migrate deploy && node dist/index.js"
 
    [[services]]
    name = "backend"
@@ -238,8 +239,8 @@
    - 选择仓库后等待 Railway 自动检测（这一步不应该再报错）
 
 4. **如果仍然失败，尝试手动配置服务**：
-   - 创建空项目后，点击 "+ New" → "GitHub Repo"
-- 手动配置每个服务（跳过自动检测阶段）
+   - 创建空项目后，点击 "Create" 按钮（或 "New"）→ "GitHub Repo"
+   - 手动配置每个服务（跳过自动检测阶段）
 
 > ⚠️ **重要提示**：创建项目后，Railway 可能会自动尝试部署第一个服务。如果失败，可以忽略此错误，继续手动添加 PostgreSQL 数据库和后端/前端服务（按照步骤 2-4）。
 
@@ -348,23 +349,6 @@
 3. 验证 node-cron 表达式是否正确
 4. 手动触发一次数据采集测试功能是否正常
 
-### 问题 6：Railpack 构建计划错误
-
-**症状**：Railway 显示 "Error creating build plan with Railpack"
-
-**原因**：
-1. Monorepo 结构未被正确识别
-2. 缺少 `railway.json` 或 `nixpacks.toml` 配置文件
-3. Git 仓库未推送到 GitHub
-
-**解决方案**：
-1. 检查 [常见问题: Error creating build plan with Railpack](#-常见问题-error-creating-build-plan-with-railpack) 章节
-2. 确保所有配置文件已提交到 Git
-3. 删除并重新创建 Railway 项目
-4. 使用手动配置方式添加服务
-
----
-
 ### 问题 5：构建超时或失败
 
 **症状**：Railway 部署卡在构建阶段
@@ -389,8 +373,8 @@
 - 路径：服务 → Metrics
 
 ### 数据库备份（推荐）
-1. 进入 PostgreSQL 服务
-2. Settings → Backups
+1. 进入 PostgreSQL 服务详情页
+2. 点击 **"Settings"** 标签，滚动到 **Backups** 区块
 3. 配置自动备份策略
 
 ### 更新部署
