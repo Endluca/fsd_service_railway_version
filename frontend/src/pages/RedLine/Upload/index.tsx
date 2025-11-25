@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Upload as AntUpload, Button, DatePicker, message, Modal, Space } from 'antd';
 import { UploadOutlined, InboxOutlined } from '@ant-design/icons';
-import type { UploadFile, UploadProps } from 'antd';
-import dayjs, { Dayjs } from 'dayjs';
+import type { UploadFile } from 'antd';
+import type { Dayjs } from 'dayjs';
 import * as redlineApi from '../../../services/redline';
 
 const { Dragger } = AntUpload;
