@@ -4,6 +4,7 @@ import MainLayout from './components/Layout/MainLayout';
 import Dashboard from './pages/Dashboard';
 import Trend from './pages/Trend';
 import TopicMining from './pages/TopicMining';
+import RedLine from './pages/RedLine';
 import './App.css';
 
 const App: React.FC = () => {
@@ -14,6 +15,7 @@ const App: React.FC = () => {
         <Route path="/dashboard" element={<MainLayout><Dashboard /></MainLayout>} />
         <Route path="/trend" element={<MainLayout><Trend /></MainLayout>} />
         <Route path="/topicmining" element={<MainLayout><TopicMining /></MainLayout>} />
+        <Route path="/redline" element={<MainLayout><RedLine /></MainLayout>} />
       </Routes>
     </BrowserRouter>
   );

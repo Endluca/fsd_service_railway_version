@@ -96,3 +96,26 @@ model Report {
   @@index([createdAt(sort: Desc)])
   @@map("reports")
 }
+
+// 红线记录表
+model RedLineRecord {
+  id                 Int      @id @default(autoincrement())
+  conversationId     String   @map("conversation_id") @db.VarChar(200)
+  customer           String   @db.VarChar(200)
+  sales              String   @db.VarChar(200)
+  department         String   @db.VarChar(20) // cc/ss/lp
+  originalDepartment String   @map("original_department") @db.VarChar(200)
+  redLineType        String   @map("red_line_type") @db.VarChar(200)
+  content            String   @db.Text
+  weekStart          DateTime @map("week_start") @db.Date
+  weekEnd            DateTime @map("week_end") @db.Date
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@unique([weekStart, weekEnd, conversationId, redLineType])
+  @@index([weekStart, weekEnd])
+  @@index([department])
+  @@index([sales])
+  @@index([conversationId])
+  @@map("red_line_record")
+}

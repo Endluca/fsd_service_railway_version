@@ -4,6 +4,7 @@ import scheduler from '../services/scheduler';
 import dataCollector from '../services/dataCollector';
 import trendService from '../services/trendService';
 import topicminingRoutes from './topicmining';
+import redlineRoutes from './redline';
 
 const router = express.Router();
 
@@ -261,6 +262,12 @@ router.get('/trend/date-range', async (req: Request, res: Response) => {
  * /api/topicmining/*
  */
 router.use('/topicmining', topicminingRoutes);
+
+/**
+ * RedLine 红线看板路由
+ * /api/redline/*
+ */
+router.use('/redline', redlineRoutes);
 
 /**
  * 健康检查

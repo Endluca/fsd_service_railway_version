@@ -5,6 +5,7 @@ import {
   DashboardOutlined,
   LineChartOutlined,
   FileTextOutlined,
+  WarningOutlined,
 } from '@ant-design/icons';
 
 const { Header, Sider, Content } = Layout;
@@ -34,6 +35,11 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       key: '/topicmining',
       icon: <FileTextOutlined />,
       label: '话题挖掘',
+    },
+    {
+      key: '/redline',
+      icon: <WarningOutlined />,
+      label: '红线看板',
     },
   ];
 

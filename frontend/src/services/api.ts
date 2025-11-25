@@ -76,3 +76,6 @@ export async function getTrendData(params: TrendQueryParams): Promise<TrendRespo
 export async function getTrendDateRange(): Promise<DateRange | null> {
   return client.get('/trend/date-range');
 }
+
+// 导出 axios client 实例供其他服务使用
+export default client;

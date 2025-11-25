@@ -40,3 +40,6 @@ prisma/migrations/
 
 # PM2
 .pm2/
+
+# API Reference
+接口参考文件/

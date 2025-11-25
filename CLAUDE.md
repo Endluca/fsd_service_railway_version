@@ -11,6 +11,34 @@ This is a **51Talk CM Team Service Timeliness Monitoring Dashboard** - a full-st
 
 The system consists of a Node.js/Express backend with PostgreSQL (via Prisma ORM) and a React/Ant Design frontend.
 
+## Key API Endpoints
+
+### Timeliness Monitoring APIs
+- `GET /api/groups` - List all sales groups
+- `GET /api/sales` - List all sales people
+- `GET /api/metrics?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD&groupName=...` - Query metrics
+- `POST /api/collect` - Manually trigger data collection (optional: `{ date: "YYYY-MM-DD" }`)
+- `POST /api/sales/sync` - Sync sales people from `人员信息.md`
+
+### Topic Mining APIs
+- `POST /api/topicmining/analyze` - Analyze CSV data
+- `POST /api/topicmining/reports` - Save report
+- `GET /api/topicmining/reports` - List saved reports
+- `GET /api/topicmining/reports/:id` - Get report by ID
+- `DELETE /api/topicmining/reports/:id` - Delete report
+
+### Health Check
+- `GET /api/health` - Service health status
+
+All API responses follow format:
+```json
+{
+  "code": 0,           // 0 = success, non-zero = error
+  "message": "OK",     // Status message
+  "data": { ... }      // Response payload
+}
+```
+
 ## Project Structure
 
 This is a monorepo with two main applications:
@@ -18,30 +46,50 @@ This is a monorepo with two main applications:
 ```
 ├── backend/          # Node.js/Express API server
 │   ├── prisma/       # Database schema and migrations
+│   │   └── schema.prisma          # Database models
 │   ├── src/
 │   │   ├── config/   # Database and environment config
-│   │   ├── services/ # Core business logic
-│   │   │   ├── dataCollector.ts   # Timeliness data collection
-│   │   │   ├── analyzer.ts        # ASR data analysis
-│   │   │   ├── topicmining/       # Topic mining services
-│   │   │   └── ...
+│   │   ├── services/ # Core business logic (singleton pattern)
+│   │   │   ├── dataCollector.ts   # Timeliness data collection orchestrator
+│   │   │   ├── analyzer.ts        # ASR data analysis (turn detection, reply time)
+│   │   │   ├── dataService.ts     # Query layer with caching strategy
+│   │   │   ├── auth.ts            # Megaview API token management
+│   │   │   ├── swApi.ts           # Megaview API client wrapper
+│   │   │   ├── salesSync.ts       # Sync sales data from 人员信息.md
+│   │   │   ├── scheduler.ts       # Cron job scheduler
+│   │   │   ├── trendService.ts    # Trend analysis calculations
+│   │   │   └── topicmining/       # Topic mining services
+│   │   │       ├── csvParser.ts   # CSV parsing logic
+│   │   │       ├── statistics.ts  # Category statistics calculations
+│   │   │       └── reportService.ts  # Report CRUD operations
 │   │   ├── routes/   # API endpoints
 │   │   │   ├── index.ts           # Main routes + timeliness APIs
 │   │   │   └── topicmining/       # Topic mining routes
 │   │   ├── types/    # TypeScript type definitions
 │   │   └── utils/    # Helper utilities
 │   └── package.json
-└── frontend/         # React/Vite SPA
-    ├── src/
-    │   ├── components/Layout/      # Main layout components
-    │   ├── pages/
-    │   │   ├── Dashboard/          # Service timeliness dashboard
-    │   │   ├── Trend/              # Trend analysis page
-    │   │   └── TopicMining/        # Topic mining report generator
-    │   ├── services/               # API clients
-    │   ├── types/                  # TypeScript definitions
-    │   └── App.tsx                 # Main app with routing
-    └── package.json
+├── frontend/         # React/Vite SPA
+│   ├── src/
+│   │   ├── components/Layout/      # Main layout components
+│   │   ├── pages/
+│   │   │   ├── Dashboard/          # Service timeliness dashboard
+│   │   │   ├── Trend/              # Trend analysis page
+│   │   │   └── TopicMining/        # Topic mining report generator
+│   │   │       ├── components/     # Topic mining UI components
+│   │   │       │   ├── CsvUploader.tsx       # CSV upload & parse
+│   │   │       │   ├── ChartViewer.tsx       # D3.js pie charts
+│   │   │       │   ├── StatisticsPanel.tsx   # Statistics display
+│   │   │       │   └── ReportGenerator.tsx   # Report generation UI
+│   │   ├── services/               # API clients
+│   │   │   └── api.ts              # Axios instance with proxy
+│   │   ├── types/                  # TypeScript definitions
+│   │   └── App.tsx                 # Main app with routing
+│   └── package.json
+├── 人员信息.md       # Sales team roster (synced to database on startup)
+├── CLAUDE.md         # This file - Claude Code guidance
+├── DEPLOYMENT.md     # Detailed Railway deployment guide
+├── MIGRATION.md      # Database migration to Railway guide
+└── scripts/          # Utility scripts (database export, etc.)
 ```
 
 ## Development Commands
@@ -89,9 +137,20 @@ npm run lint       # Run ESLint
 
 3. **Data Storage** (Prisma models in `schema.prisma`)
    - `SalesPerson`: Sales rep info with group assignment
+     - `openUserId`: Unique identifier from Megaview system
+     - `groupName`: Team/group assignment (synced from `人员信息.md`)
    - `DailyMetric`: Raw daily data per sales rep
+     - `customerTurnCount`: Number of customer speaking turns (旧规则)
+     - `newRuleCustomerTurnCount`: Total customer messages (新规则)
+     - `overtimeReplyCount`: Replied but >1 hour
+     - `overtimeNoReplyCount`: Never replied and >1 hour since last customer message
+     - `processedConversationIds`: Array of conversation IDs to prevent duplicate processing
    - `DateRangeCache`: Pre-calculated aggregates for date ranges
+     - Stores pre-aggregated results for common date range queries
+     - Significantly improves dashboard performance
    - `ApiToken`: Auto-refreshing access tokens for SW API
+     - `expiresAt`: Token expiration timestamp
+   - `Report`: Topic mining report storage (see Topic Mining Module)
 
 4. **Query Layer** (`dataService.ts`)
    - Checks `DateRangeCache` first for performance
@@ -210,13 +269,30 @@ Expected columns from Megaview export:
 
 Backend requires `.env` file:
 ```env
+# Database
 DATABASE_URL="postgresql://user:pass@localhost:5432/bashboard?schema=public"
+
+# Megaview API
 SWAPI_BASE_URL="https://open.megaview.com"
 SWAPI_APP_KEY="your_app_key"
 SWAPI_APP_SECRET="your_app_secret"
+
+# Server
 PORT=3005
-CRON_SCHEDULE="0 5 * * *"  # 5 AM daily
+NODE_ENV="development"
+
+# CORS - comma-separated list of allowed origins
+ALLOWED_ORIGINS="http://localhost:5175,https://your-frontend-domain.railway.app"
+
+# Cron
+CRON_SCHEDULE="0 5 * * *"  # 5 AM daily (Beijing Time)
 TIMEZONE="Asia/Shanghai"
+```
+
+Frontend (Vite) environment variables (optional):
+```env
+# API endpoint - defaults to Vite proxy in dev mode
+VITE_API_BASE_URL="http://localhost:3005"  # or Railway backend URL in production
 ```
 
 ## Important Implementation Notes
@@ -225,6 +301,7 @@ TIMEZONE="Asia/Shanghai"
 - All service files export singleton instances (lowercase names), not classes
 - Example: `import authService from './services/auth'` (not `new AuthService()`)
 - Services are initialized in sequence during `bootstrap()` in `index.ts`
+- Bootstrap order: validateConfig() → authService → dataCollector → Express → scheduler
 
 ### When Modifying Database Schema
 1. Edit `backend/prisma/schema.prisma`
@@ -235,8 +312,10 @@ TIMEZONE="Asia/Shanghai"
 ### When Adding API Endpoints
 - For timeliness monitoring: Add routes to `backend/src/routes/index.ts`
 - For topic mining: Add routes to `backend/src/routes/topicmining/`
-- All routes are mounted at `/api/*`
+- All routes are mounted at `/api/*` (configured in `backend/src/index.ts`)
 - All responses follow format: `{ code: number, message?: string, data?: any }`
+- Error responses: `code` > 0 indicates error; `message` contains error description
+- Success responses: `code` = 0; `data` contains result payload
 
 ### When Modifying Data Collection Logic (Timeliness Module)
 - Core analysis in `analyzer.ts` - handles turn detection and reply time calculation
@@ -261,9 +340,69 @@ TIMEZONE="Asia/Shanghai"
 - Verify chart rendering for categories with many children (>10)
 - Test report saving/loading from database via API endpoints
 
+### Local Development Setup
+1. **Database Setup**:
+   ```bash
+   # Install PostgreSQL if not already installed
+   # Create database
+   createdb bashboard
+
+   # Run migrations
+   cd backend
+   npm run prisma:migrate
+   ```
+
+2. **Start Backend**:
+   ```bash
+   cd backend
+   npm install
+   npm run dev  # Runs on http://localhost:3005
+   ```
+
+3. **Start Frontend** (in separate terminal):
+   ```bash
+   cd frontend
+   npm install
+   npm run dev  # Runs on http://localhost:5175
+   ```
+
+4. **Sync Sales Data** (first time setup):
+   - Ensure `人员信息.md` exists in project root with sales team data
+   - Backend auto-syncs on startup
+   - Manual trigger: POST to `/api/sales/sync`
+
 ## Production Deployment
 
-Recommended: Use PM2 for process management
+### Railway Deployment (Recommended)
+
+This project is optimized for Railway deployment with a monorepo structure. See `DEPLOYMENT.md` for comprehensive Railway setup guide.
+
+**Quick Deploy Steps**:
+1. Create empty Railway project with PostgreSQL database
+2. Add backend service (GitHub repo, root: `backend`, watch: `backend/**`)
+3. Add frontend service (GitHub repo, root: `frontend`, watch: `frontend/**`)
+4. Configure environment variables and generate domains
+5. Update CORS settings with frontend domain
+
+**Critical Railway Settings**:
+- Backend Start Command: `npx prisma migrate deploy && node dist/index.js`
+- Frontend needs `VITE_API_BASE_URL` pointing to backend domain
+- Backend needs `ALLOWED_ORIGINS` with frontend domain
+- Watch Paths must use absolute paths from repo root
+
+**Data Migration to Railway**:
+See `MIGRATION.md` for detailed steps to migrate local PostgreSQL data to Railway:
+```bash
+# Export local data
+pg_dump -h localhost -U postgres -d bashboard --data-only --column-inserts > local_data.sql
+
+# Import to Railway
+psql "Railway_DATABASE_URL" < local_data.sql
+```
+
+### Alternative: PM2 Deployment
+
+For VPS/dedicated server deployment:
 ```bash
 # Build both apps
 cd frontend && npm run build
@@ -292,6 +431,19 @@ Frontend build output goes to `frontend/dist/` - serve with nginx or similar.
 - **Cron job not running**: Verify server timezone is `Asia/Shanghai` or adjust `CRON_SCHEDULE`
 - **Missing data for certain dates**: Check if data collection job failed; manually trigger with `POST /api/collect`
 - **Incorrect metrics**: Verify ASR data format from Megaview API matches expected structure in `analyzer.ts`
+
+### Railway Deployment Issues
+
+- **502 Error on frontend**:
+  - Check Start Command uses `$PORT` variable: `npm run preview -- --host 0.0.0.0 --port $PORT`
+  - Verify `VITE_API_BASE_URL` is set to backend domain (without `/api` suffix)
+  - Ensure Build Command is set: `npm run build`
+- **Backend 404 is normal**: Root path `/` returns 404; use `/api/*` endpoints instead
+- **Build plan errors with Railpack**:
+  - Don't use "Deploy from GitHub repo" auto-detect for monorepos
+  - Create empty project first, then manually add services with Root Directory set
+- **Watch Paths critical**: Must use absolute paths from repo root (e.g., `backend/**` not `**`)
+- **CORS errors**: Update backend `ALLOWED_ORIGINS` with frontend domain after deployment
 
 ### Topic Mining Module
 
