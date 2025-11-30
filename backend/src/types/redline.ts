@@ -151,3 +151,57 @@ export interface WeekItem {
   weekEnd: string;
   recordCount: number;
 }
+
+// ========== 红线对比功能类型 ==========
+
+// 会话总数相关
+export interface ConversationCountInput {
+  ccConversationCount?: number;
+  lpConversationCount?: number;
+  ssConversationCount?: number;
+}
+
+export interface ConversationCountData {
+  weekStart: Date;
+  weekEnd: Date;
+  department: string;
+  conversationCount: number;
+}
+
+// 对比趋势查询参数
+export interface ComparisonQueryParams {
+  weekStarts: Date[];
+  weekEnds: Date[];
+  departments?: string[];
+  redLineTypes?: string[];
+}
+
+// 总红线趋势数据
+export interface OverallTrendData {
+  weeks: string[];
+  series: {
+    [department: string]: {
+      ratios: number[];
+    };
+  };
+}
+
+// 各红线趋势数据
+export interface RedLineTrendData {
+  weeks: string[];
+  redLineTypes: string[];
+  series: {
+    [week: string]: {
+      [redLineType: string]: {
+        count: number;
+        percentage: number;
+      };
+    };
+  };
+}
+
+// 对比趋势完整结果
+export interface ComparisonTrendResult {
+  overallTrend: OverallTrendData;
+  redLineTrend: RedLineTrendData;
+}

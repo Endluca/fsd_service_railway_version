@@ -5,6 +5,8 @@ import dataCollector from '../services/dataCollector';
 import trendService from '../services/trendService';
 import topicminingRoutes from './topicmining';
 import redlineRoutes from './redline';
+import angrybirdRoutes from './angrybird';
+import socialmediaRoutes from './socialmedia';
 
 const router = express.Router();
 
@@ -190,12 +192,17 @@ router.post('/collect-range', async (req: Request, res: Response) => {
  *   - endDate: 结束日期 (YYYY-MM-DD)
  *   - granularity: 时间颗粒度 ('day' | 'week')
  *   - comparisonType: 对比类型 ('all' | 'group' | 'person')
- *   - groupName: 小组名称 (当 comparisonType='person' 时必填)
+ *   - groupNames: 小组名称数组 (当 comparisonType='group' 时可选)
+ *   - openUserIds: 人员ID数组 (当 comparisonType='person' 时必填)
  *   - metric: 指标类型 ('timelyReplyRate' | 'overtimeReplyRate' | 'avgReplyDuration' | 'conversationCount')
  */
 router.get('/trend', async (req: Request, res: Response) => {
   try {
-    const { startDate, endDate, granularity, comparisonType, groupName, metric } = req.query;
+    const { startDate, endDate, granularity, comparisonType, metric } = req.query;
+
+    // 解析多选参数
+    const groupNames = parseArrayParam(req.query.groupNames as string | string[] | undefined);
+    const openUserIds = parseArrayParam(req.query.openUserIds as string | string[] | undefined);
 
     // 参数验证
     if (!startDate || !endDate || !granularity || !comparisonType || !metric) {
@@ -205,10 +212,11 @@ router.get('/trend', async (req: Request, res: Response) => {
       });
     }
 
-    if (comparisonType === 'person' && !groupName) {
+    // 组内人员对比时必须指定人员
+    if (comparisonType === 'person' && (!openUserIds || openUserIds.length === 0)) {
       return res.status(400).json({
         code: 400,
-        message: '选择个人对比时必须指定 groupName',
+        message: '选择个人对比时必须指定至少一个人员',
       });
     }
 
@@ -217,7 +225,8 @@ router.get('/trend', async (req: Request, res: Response) => {
       endDate: endDate as string,
       granularity: granularity as 'day' | 'week',
       comparisonType: comparisonType as 'all' | 'group' | 'person',
-      groupName: groupName as string | undefined,
+      groupNames,
+      openUserIds,
       metric: metric as 'timelyReplyRate' | 'overtimeReplyRate' | 'avgReplyDuration' | 'conversationCount',
     });
 
@@ -268,6 +277,18 @@ router.use('/topicmining', topicminingRoutes);
  * /api/redline/*
  */
 router.use('/redline', redlineRoutes);
+
+/**
+ * AngryBird 愤怒小鸟路由
+ * /api/angrybird/*
+ */
+router.use('/angrybird', angrybirdRoutes);
+
+/**
+ * SocialMedia 社媒声音路由
+ * /api/socialmedia/*
+ */
+router.use('/socialmedia', socialmediaRoutes);
 
 /**
  * 健康检查

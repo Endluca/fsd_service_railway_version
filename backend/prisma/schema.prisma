@@ -119,3 +119,44 @@ model RedLineRecord {
   @@index([conversationId])
   @@map("red_line_record")
 }
+
+// 愤怒小鸟记录表
+model AngryBirdRecord {
+  id                   Int      @id @default(autoincrement())
+  conversationId       String   @map("conversation_id") @db.VarChar(200)
+  conversationStartTime DateTime @map("conversation_start_time") @db.Timestamp
+  customer             String   @db.VarChar(200)
+  sales                String   @db.VarChar(200)
+  department           String   @db.VarChar(20) // cc/ss/lp
+  originalDepartment   String   @map("original_department") @db.VarChar(200)
+  customerEmotion      String   @map("customer_emotion") @db.VarChar(200)
+  content              String?  @db.Text // 原文可选，允许为空
+  weekStart            DateTime @map("week_start") @db.Date
+  weekEnd              DateTime @map("week_end") @db.Date
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  @@unique([weekStart, weekEnd, conversationId])
+  @@index([weekStart, weekEnd])
+  @@index([department])
+  @@index([sales])
+  @@index([customerEmotion])
+  @@index([conversationId])
+  @@map("angry_bird_record")
+}
+
+// 周会话总数表 (用于红线对比功能)
+model WeekConversationCount {
+  id                Int      @id @default(autoincrement())
+  weekStart         DateTime @map("week_start") @db.Date
+  weekEnd           DateTime @map("week_end") @db.Date
+  department        String   @db.VarChar(20) // cc/ss/lp
+  conversationCount Int      @map("conversation_count")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@unique([weekStart, weekEnd, department])
+  @@index([weekStart, weekEnd])
+  @@index([department])
+  @@map("week_conversation_count")
+}

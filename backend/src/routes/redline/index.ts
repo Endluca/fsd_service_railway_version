@@ -7,6 +7,8 @@ import multer from 'multer';
 import { parseXlsxFile } from '../../services/redline/xlsxParser';
 import redLineService from '../../services/redline/redLineService';
 import statisticsService from '../../services/redline/statisticsService';
+import conversationCountService from '../../services/redline/conversationCountService';
+import comparisonService from '../../services/redline/comparisonService';
 
 const router = express.Router();
 
@@ -36,7 +38,7 @@ const upload = multer({
 router.post('/upload', upload.single('file'), async (req, res) => {
   try {
     const file = req.file;
-    const { weekStart, weekEnd, replace } = req.body;
+    const { weekStart, weekEnd, replace, ccConversationCount, lpConversationCount, ssConversationCount } = req.body;
 
     // 验证文件
     if (!file) {
@@ -74,6 +76,61 @@ router.post('/upload', upload.single('file'), async (req, res) => {
       });
     }
 
+    // 验证会话总数: 至少填写一个部门的会话总数
+    const conversationCounts = [];
+    if (ccConversationCount) {
+      const count = parseInt(ccConversationCount);
+      if (isNaN(count) || count <= 0) {
+        return res.json({
+          code: 1,
+          message: 'CC会话总数必须是正整数',
+        });
+      }
+      conversationCounts.push({
+        weekStart: weekStartDate,
+        weekEnd: weekEndDate,
+        department: 'cc',
+        conversationCount: count,
+      });
+    }
+    if (lpConversationCount) {
+      const count = parseInt(lpConversationCount);
+      if (isNaN(count) || count <= 0) {
+        return res.json({
+          code: 1,
+          message: 'LP会话总数必须是正整数',
+        });
+      }
+      conversationCounts.push({
+        weekStart: weekStartDate,
+        weekEnd: weekEndDate,
+        department: 'lp',
+        conversationCount: count,
+      });
+    }
+    if (ssConversationCount) {
+      const count = parseInt(ssConversationCount);
+      if (isNaN(count) || count <= 0) {
+        return res.json({
+          code: 1,
+          message: 'SS会话总数必须是正整数',
+        });
+      }
+      conversationCounts.push({
+        weekStart: weekStartDate,
+        weekEnd: weekEndDate,
+        department: 'ss',
+        conversationCount: count,
+      });
+    }
+
+    if (conversationCounts.length === 0) {
+      return res.json({
+        code: 1,
+        message: '请至少填写一个部门的会话总数（cc/lp/ss）',
+      });
+    }
+
     // 检查该周是否已有数据（如果不是替换模式）
     // 提前检查，避免解析大文件后才发现数据已存在
     if (replace !== 'true' && replace !== true) {
@@ -100,7 +157,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
       });
     }
 
-    // 导入数据
+    // 导入数据 - 在事务中同时处理红线记录和会话总数
     const importResult = await redLineService.importData(
       parseResult.data!,
       { weekStart: weekStartDate, weekEnd: weekEndDate },
@@ -114,11 +171,15 @@ router.post('/upload', upload.single('file'), async (req, res) => {
       });
     }
 
+    // 导入会话总数
+    const conversationCountResult = await conversationCountService.upsertCounts(conversationCounts);
+
     return res.json({
       code: 0,
       message: '导入成功',
       data: {
         imported: importResult.imported,
+        conversationCountsUpserted: conversationCountResult,
         weekStart,
         weekEnd,
       },
@@ -376,6 +437,78 @@ router.get('/details', async (req, res) => {
     });
   } catch (error) {
     console.error('获取详情失败:', error);
+    return res.json({
+      code: 1,
+      message: error instanceof Error ? error.message : '查询失败',
+    });
+  }
+});
+
+/**
+ * GET /api/redline/comparison-trend
+ * 获取红线对比趋势数据
+ * Query 参数: weekStarts[], weekEnds[], departments[]?, redLineTypes[]?
+ */
+router.get('/comparison-trend', async (req, res) => {
+  try {
+    const { weekStarts, weekEnds, departments, redLineTypes } = req.query;
+
+    // 参数验证
+    if (!weekStarts || !weekEnds) {
+      return res.json({
+        code: 1,
+        message: '请指定周范围',
+      });
+    }
+
+    // 转换为数组
+    const weekStartArray = Array.isArray(weekStarts) ? weekStarts : [weekStarts];
+    const weekEndArray = Array.isArray(weekEnds) ? weekEnds : [weekEnds];
+
+    if (weekStartArray.length !== weekEndArray.length) {
+      return res.json({
+        code: 1,
+        message: '周开始和结束日期数量不匹配',
+      });
+    }
+
+    // 解析日期
+    const weekStartDates = weekStartArray.map(d => new Date(d as string));
+    const weekEndDates = weekEndArray.map(d => new Date(d as string));
+
+    // 验证日期
+    for (let i = 0; i < weekStartDates.length; i++) {
+      if (isNaN(weekStartDates[i].getTime()) || isNaN(weekEndDates[i].getTime())) {
+        return res.json({
+          code: 1,
+          message: '日期格式错误',
+        });
+      }
+    }
+
+    // 转换部门和红线类型参数
+    const departmentArray = departments
+      ? (Array.isArray(departments) ? departments : [departments]) as string[]
+      : undefined;
+
+    const redLineTypeArray = redLineTypes
+      ? (Array.isArray(redLineTypes) ? redLineTypes : [redLineTypes]) as string[]
+      : undefined;
+
+    // 调用服务层
+    const result = await comparisonService.getComparisonTrend({
+      weekStarts: weekStartDates,
+      weekEnds: weekEndDates,
+      departments: departmentArray,
+      redLineTypes: redLineTypeArray,
+    });
+
+    return res.json({
+      code: 0,
+      data: result,
+    });
+  } catch (error) {
+    console.error('获取对比趋势失败:', error);
     return res.json({
       code: 1,
       message: error instanceof Error ? error.message : '查询失败',

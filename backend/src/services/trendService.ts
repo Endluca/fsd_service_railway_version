@@ -16,18 +16,19 @@ export class TrendService {
     endDate: string;
     granularity: 'day' | 'week';
     comparisonType: 'all' | 'group' | 'person';
-    groupName?: string;
+    groupNames?: string[];
+    openUserIds?: string[];
     metric: 'timelyReplyRate' | 'overtimeReplyRate' | 'avgReplyDuration' | 'conversationCount';
   }) {
-    const { startDate, endDate, granularity, comparisonType, groupName, metric } = params;
+    const { startDate, endDate, granularity, comparisonType, groupNames, openUserIds, metric } = params;
 
     // 验证参数
-    if (comparisonType === 'person' && !groupName) {
-      throw new Error('选择个人对比时必须指定小组');
+    if (comparisonType === 'person' && (!openUserIds || openUserIds.length === 0)) {
+      throw new Error('选择个人对比时必须指定至少一个人员');
     }
 
     // 查询数据
-    const dailyMetrics = await this.queryDailyMetrics(startDate, endDate, groupName, comparisonType);
+    const dailyMetrics = await this.queryDailyMetrics(startDate, endDate, groupNames, openUserIds, comparisonType);
 
     // 按颗粒度和对比类型处理数据
     if (granularity === 'day') {
@@ -43,7 +44,8 @@ export class TrendService {
   private async queryDailyMetrics(
     startDate: string,
     endDate: string,
-    groupName?: string,
+    groupNames?: string[],
+    openUserIds?: string[],
     comparisonType?: string
   ) {
     const where: Prisma.DailyMetricWhereInput = {
@@ -52,6 +54,18 @@ export class TrendService {
         lte: new Date(endDate),
       },
     };
+
+    // 优先使用人员ID过滤（组内人员对比）
+    if (openUserIds && openUserIds.length > 0) {
+      where.openUserId = { in: openUserIds };
+    }
+    // 否则使用组名过滤（组间对比）
+    else if (groupNames && groupNames.length > 0) {
+      where.salesPerson = {
+        groupName: { in: groupNames }
+      };
+    }
+    // 不提供过滤条件时，返回所有数据（向下兼容）
 
     const dailyMetrics = await prisma.dailyMetric.findMany({
       where,
@@ -62,13 +76,6 @@ export class TrendService {
         date: 'asc',
       },
     });
-
-    // 根据对比类型过滤
-    if (comparisonType === 'person' && groupName) {
-      return dailyMetrics.filter(m => m.salesPerson.groupName === groupName);
-    } else if (comparisonType === 'group' && groupName) {
-      return dailyMetrics.filter(m => m.salesPerson.groupName === groupName);
-    }
 
     return dailyMetrics;
   }
@@ -128,12 +135,12 @@ export class TrendService {
     const series = Array.from(dateMap.entries()).map(([date, data]) => ({
       date,
       value: this.calculateMetric(data, metric),
-      name: '全公司',
+      name: '整体',
     }));
 
     return {
       series,
-      lines: ['全公司'],
+      lines: ['整体'],
     };
   }
 
@@ -310,12 +317,12 @@ export class TrendService {
     const series = Array.from(weekMap.entries()).map(([week, data]) => ({
       date: week,
       value: this.calculateMetric(data, metric),
-      name: '全公司',
+      name: '整体',
     }));
 
     return {
       series,
-      lines: ['全公司'],
+      lines: ['整体'],
     };
   }
 
