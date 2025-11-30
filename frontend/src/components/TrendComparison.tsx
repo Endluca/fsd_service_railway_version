@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Space,
   Radio,
@@ -16,7 +16,6 @@ import isoWeek from 'dayjs/plugin/isoWeek';
 import type {
   MetricType,
   DateRange,
-  SalesData,
   TrendQueryParams,
 } from '../types';
 import { getTrendData, getTrendDateRange, getGroups, getSales } from '../services/api';
@@ -88,7 +87,7 @@ const TrendComparison: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [availableDateRange, setAvailableDateRange] = useState<DateRange | null>(null);
   const [groups, setGroups] = useState<string[]>([]);
-  const [allSalesPeople, setAllSalesPeople] = useState<SalesData[]>([]);
+  const [allSalesPeople, setAllSalesPeople] = useState<{ openUserId: string; name: string; groupName: string | null }[]>([]);
   // const [annotations, setAnnotations] = useState<any[]>([]); // 暂时禁用 annotations
   const isInitialMountRef = useRef(true);
   const chartRef = useRef<any>(null);
@@ -233,8 +232,8 @@ const TrendComparison: React.FC = () => {
   };
 
   // 生成分组人员选项
-  const generatePersonOptions = (salesPeople: SalesData[]) => {
-    const groupMap = new Map<string, SalesData[]>();
+  const generatePersonOptions = (salesPeople: { openUserId: string; name: string; groupName: string | null }[]) => {
+    const groupMap = new Map<string, { openUserId: string; name: string; groupName: string | null }[]>();
 
     salesPeople.forEach(person => {
       const group = person.groupName || '未分配';
@@ -263,7 +262,8 @@ const TrendComparison: React.FC = () => {
     return current.isBefore(minDate, 'day') || current.isAfter(maxDate, 'day');
   };
 
-  // 获取指标单位
+  // 获取指标单位（暂时禁用，与 annotations 功能一起使用）
+  /*
   const getMetricUnit = (metricType: MetricType): string => {
     switch (metricType) {
       case 'timelyReplyRate':
@@ -277,6 +277,7 @@ const TrendComparison: React.FC = () => {
         return '';
     }
   };
+  */
 
   // 获取指标名称
   const getMetricName = (metricType: MetricType): string => {
@@ -353,7 +354,6 @@ const TrendComparison: React.FC = () => {
     if (!trendData || trendData.series.length === 0) return null;
 
     const colors = generateColors(trendData.lines.length);
-    const unit = getMetricUnit(metric);
 
     return {
       data: trendData.series,

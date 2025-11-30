@@ -24,7 +24,6 @@ import { saveSearchHistory } from '../../../services/socialmediaStorage';
 import type {
   SearchFormData,
   SearchResult,
-  Platform,
   SearchHistoryItem,
 } from '../../../types/socialmedia';
 
