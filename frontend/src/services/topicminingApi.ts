@@ -4,6 +4,8 @@ import type {
   ReportPayload,
   ReportEntity,
   ReportListItem,
+  MonthInfo,
+  ComparisonResult,
 } from '../types/topicmining';
 
 const client = axios.create({
@@ -60,4 +62,30 @@ export async function getReportById(id: string): Promise<ReportEntity> {
  */
 export async function deleteReport(id: string): Promise<void> {
   return client.delete(`/reports/${id}`);
+}
+
+// ========== 月度对比相关API ==========
+
+/**
+ * 获取可用月份列表
+ */
+export async function getAvailableMonths(): Promise<{ months: MonthInfo[] }> {
+  return client.get('/comparison/months');
+}
+
+/**
+ * 获取月度对比数据
+ */
+export async function getMonthlyComparison(
+  months: string[],
+  parentTopN: number,
+  childTopN: number
+): Promise<ComparisonResult> {
+  // 使用 URLSearchParams 手动构建查询字符串
+  const params = new URLSearchParams();
+  months.forEach((month) => params.append('months[]', month));
+  params.append('parentTopN', parentTopN.toString());
+  params.append('childTopN', childTopN.toString());
+
+  return client.get(`/comparison?${params.toString()}`);
 }

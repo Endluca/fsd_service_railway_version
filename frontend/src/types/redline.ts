@@ -88,3 +88,42 @@ export interface ApiResponse<T = any> {
   message?: string;
   data?: T;
 }
+
+// ========== 红线对比页面类型 ==========
+
+// 总红线趋势数据
+export interface OverallTrendData {
+  weeks: string[];
+  series: {
+    [department: string]: {  // 'cc' | 'ss' | 'lp' | 'all'
+      ratios: number[];
+    };
+  };
+}
+
+// 各红线趋势数据
+export interface RedLineTrendData {
+  weeks: string[];
+  redLineTypes: string[];
+  series: {
+    [week: string]: {
+      [redLineType: string]: {
+        count: number;
+        percentage: number;
+      };
+    };
+  };
+}
+
+// 对比趋势完整结果
+export interface ComparisonTrendResult {
+  overallTrend: OverallTrendData;
+  redLineTrend: RedLineTrendData;
+}
+
+// 图表数据格式
+export interface ColumnChartDataItem {
+  category: string;    // X轴值
+  value: number;       // Y轴值
+  type: string;        // 分组标识
+}

@@ -10,7 +10,9 @@ interface TrendState {
   granularity: Granularity;
   metric: MetricType;
   dateRange: [Dayjs, Dayjs] | null;
-  selectedGroup: string | undefined;
+  selectedGroup: string | undefined;  // 废弃但保留向下兼容
+  selectedGroups: string[];           // 新增：组间对比时选择的组列表
+  selectedPersons: string[];          // 新增：组内人员对比时选择的人员ID列表
   trendData: TrendResponse | null;
 
   // Actions
@@ -18,7 +20,9 @@ interface TrendState {
   setGranularity: (granularity: Granularity) => void;
   setMetric: (metric: MetricType) => void;
   setDateRange: (range: [Dayjs, Dayjs] | null) => void;
-  setSelectedGroup: (group: string | undefined) => void;
+  setSelectedGroup: (group: string | undefined) => void;  // 保留但不再使用
+  setSelectedGroups: (groups: string[]) => void;          // 新增
+  setSelectedPersons: (persons: string[]) => void;        // 新增
   setTrendData: (data: TrendResponse | null) => void;
   reset: () => void;
 }
@@ -30,6 +34,8 @@ const initialState = {
   metric: 'timelyReplyRate' as MetricType,
   dateRange: null as [Dayjs, Dayjs] | null,
   selectedGroup: undefined as string | undefined,
+  selectedGroups: [] as string[],
+  selectedPersons: [] as string[],
   trendData: null as TrendResponse | null,
 };
 
@@ -108,6 +114,8 @@ export const useTrendStore = create<TrendState>()(
       setMetric: (metric) => set({ metric }),
       setDateRange: (range) => set({ dateRange: range }),
       setSelectedGroup: (group) => set({ selectedGroup: group }),
+      setSelectedGroups: (groups) => set({ selectedGroups: groups }),
+      setSelectedPersons: (persons) => set({ selectedPersons: persons }),
       setTrendData: (data) => set({ trendData: data }),
       reset: () => set(initialState),
     }),

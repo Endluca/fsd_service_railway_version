@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload as AntUpload, Button, DatePicker, message, Modal, Space } from 'antd';
+import { Upload as AntUpload, Button, DatePicker, message, Modal, Space, InputNumber, Row, Col } from 'antd';
 import { UploadOutlined, InboxOutlined } from '@ant-design/icons';
 import type { UploadFile } from 'antd';
 import type { Dayjs } from 'dayjs';
@@ -13,6 +13,9 @@ const Upload: React.FC = () => {
   const [weekStart, setWeekStart] = useState<string>('');
   const [weekEnd, setWeekEnd] = useState<string>('');
   const [loading, setLoading] = useState(false);
+  const [ccConversationCount, setCcConversationCount] = useState<number | null>(null);
+  const [lpConversationCount, setLpConversationCount] = useState<number | null>(null);
+  const [ssConversationCount, setSsConversationCount] = useState<number | null>(null);
 
   // 验证日期范围是否是完整的一周（周一到周日）
   const validateWeekRange = (start: Dayjs, end: Dayjs): boolean => {
@@ -70,9 +73,23 @@ const Upload: React.FC = () => {
       return;
     }
 
+    // 验证至少填写一个会话总数
+    if (!ccConversationCount && !lpConversationCount && !ssConversationCount) {
+      message.error('请至少填写一个部门的会话总数（CC/LP/SS）');
+      return;
+    }
+
     setLoading(true);
     try {
-      const result = await redlineApi.uploadFile(currentFile, weekStart, weekEnd, replace);
+      const result = await redlineApi.uploadFile(
+        currentFile,
+        weekStart,
+        weekEnd,
+        replace,
+        ccConversationCount,
+        lpConversationCount,
+        ssConversationCount
+      );
 
       // 添加防御性检查
       if (!result) {
@@ -139,14 +156,52 @@ const Upload: React.FC = () => {
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
         <div>
           <h4>选择时间范围（必须是完整的一周：周一到周日）</h4>
-          <DatePicker.RangePicker
-            onChange={onDateRangeChange}
-            format="YYYY-MM-DD"
-            style={{ width: 400 }}
-            placeholder={['开始日期（周一）', '结束日期（周日）']}
-          />
+          <Row gutter={16} align="middle">
+            <Col>
+              <DatePicker.RangePicker
+                onChange={onDateRangeChange}
+                format="YYYY-MM-DD"
+                style={{ width: 400 }}
+                placeholder={['开始日期（周一）', '结束日期（周日）']}
+              />
+            </Col>
+            <Col>
+              <Space size="middle">
+                <div>
+                  <label style={{ marginRight: 8 }}>CC会话数:</label>
+                  <InputNumber
+                    min={1}
+                    placeholder="请输入"
+                    value={ccConversationCount}
+                    onChange={setCcConversationCount}
+                    style={{ width: 120 }}
+                  />
+                </div>
+                <div>
+                  <label style={{ marginRight: 8 }}>LP会话数:</label>
+                  <InputNumber
+                    min={1}
+                    placeholder="请输入"
+                    value={lpConversationCount}
+                    onChange={setLpConversationCount}
+                    style={{ width: 120 }}
+                  />
+                </div>
+                <div>
+                  <label style={{ marginRight: 8 }}>SS会话数:</label>
+                  <InputNumber
+                    min={1}
+                    placeholder="请输入"
+                    value={ssConversationCount}
+                    onChange={setSsConversationCount}
+                    style={{ width: 120 }}
+                  />
+                </div>
+              </Space>
+            </Col>
+          </Row>
           <div style={{ marginTop: 8, fontSize: '12px', color: '#999' }}>
-            示例：2025-11-10（周一）至 2025-11-16（周日）
+            示例：2025-11-10（周一）至 2025-11-16（周日），至少填写一个部门的会话总数
           </div>
           {weekStart && weekEnd && (
             <div style={{ marginTop: 8, color: '#52c41a', fontWeight: 'bold' }}>

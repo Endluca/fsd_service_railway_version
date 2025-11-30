@@ -5,6 +5,8 @@ import Dashboard from './pages/Dashboard';
 import Trend from './pages/Trend';
 import TopicMining from './pages/TopicMining';
 import RedLine from './pages/RedLine';
+import AngryBird from './pages/AngryBird';
+import SocialMedia from './pages/SocialMedia';
 import './App.css';
 
 const App: React.FC = () => {
@@ -16,6 +18,8 @@ const App: React.FC = () => {
         <Route path="/trend" element={<MainLayout><Trend /></MainLayout>} />
         <Route path="/topicmining" element={<MainLayout><TopicMining /></MainLayout>} />
         <Route path="/redline" element={<MainLayout><RedLine /></MainLayout>} />
+        <Route path="/angrybird" element={<MainLayout><AngryBird /></MainLayout>} />
+        <Route path="/socialmedia" element={<MainLayout><SocialMedia /></MainLayout>} />
       </Routes>
     </BrowserRouter>
   );

@@ -6,6 +6,8 @@ import {
   LineChartOutlined,
   FileTextOutlined,
   WarningOutlined,
+  ThunderboltOutlined,
+  GlobalOutlined,
 } from '@ant-design/icons';
 
 const { Header, Sider, Content } = Layout;
@@ -40,6 +42,16 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       key: '/redline',
       icon: <WarningOutlined />,
       label: '红线看板',
+    },
+    {
+      key: '/angrybird',
+      icon: <ThunderboltOutlined />,
+      label: '愤怒小鸟',
+    },
+    {
+      key: '/socialmedia',
+      icon: <GlobalOutlined />,
+      label: '社媒声音',
     },
   ];
 

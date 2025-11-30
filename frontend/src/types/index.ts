@@ -43,14 +43,15 @@ export interface TrendQueryParams {
   endDate: string;
   granularity: Granularity;
   comparisonType: ComparisonType;
-  groupName?: string;
+  groupNames?: string[];      // 组间对比时的组列表（多选）
+  openUserIds?: string[];     // 组内人员对比时的人员ID列表（多选，支持跨组）
   metric: MetricType;
 }
 
 export interface TrendDataPoint {
   date: string; // YYYY-MM-DD 或 YYYY-WW (周格式)
   value: number;
-  name: string; // 线的名称（全公司/组名/人名）
+  name: string; // 线的名称（整体/组名/人名）
 }
 
 export interface TrendResponse {

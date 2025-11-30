@@ -6,6 +6,7 @@ import React from 'react';
 import { Tabs } from 'antd';
 import Upload from './Upload';
 import Display from './Display';
+import Comparison from './Comparison';
 
 const RedLine: React.FC = () => {
   const items = [
@@ -18,6 +19,11 @@ const RedLine: React.FC = () => {
       key: 'display',
       label: '数据展示',
       children: <Display />,
+    },
+    {
+      key: 'comparison',
+      label: '红线对比',
+      children: <Comparison />,
     },
   ];
 

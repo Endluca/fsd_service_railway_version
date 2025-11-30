@@ -34,13 +34,27 @@ export const uploadFile = async (
   file: File,
   weekStart: string,
   weekEnd: string,
-  replace: boolean = false
+  replace: boolean = false,
+  ccConversationCount?: number | null,
+  lpConversationCount?: number | null,
+  ssConversationCount?: number | null
 ): Promise<UploadResponse> => {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('weekStart', weekStart);
   formData.append('weekEnd', weekEnd);
   formData.append('replace', replace.toString());
+
+  // 添加会话总数参数
+  if (ccConversationCount !== null && ccConversationCount !== undefined) {
+    formData.append('ccConversationCount', ccConversationCount.toString());
+  }
+  if (lpConversationCount !== null && lpConversationCount !== undefined) {
+    formData.append('lpConversationCount', lpConversationCount.toString());
+  }
+  if (ssConversationCount !== null && ssConversationCount !== undefined) {
+    formData.append('ssConversationCount', ssConversationCount.toString());
+  }
 
   return requestWithoutInterceptor<UploadResponse>({
     url: '/redline/upload',
@@ -135,6 +149,28 @@ export const getDetails = async (
       sales,
       page,
       pageSize,
+    },
+    paramsSerializer: {
+      indexes: null,
+    },
+  });
+};
+
+// 获取对比趋势数据
+export const getComparisonTrend = async (
+  weekStarts: string[],
+  weekEnds: string[],
+  departments?: string[],
+  redLineTypes?: string[]
+): Promise<ApiResponse<import('../types/redline').ComparisonTrendResult>> => {
+  return requestWithoutInterceptor<ApiResponse<import('../types/redline').ComparisonTrendResult>>({
+    url: '/redline/comparison-trend',
+    method: 'GET',
+    params: {
+      weekStarts,
+      weekEnds,
+      departments,
+      redLineTypes,
     },
     paramsSerializer: {
       indexes: null,

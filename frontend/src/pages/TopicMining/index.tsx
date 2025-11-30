@@ -7,6 +7,7 @@ import ChartViewer from './components/ChartViewer';
 import ReportGenerator from './components/ReportGenerator';
 import ReportHistory from './components/ReportHistory';
 import ReportViewer from './components/ReportViewer';
+import MonthlyComparison from './components/MonthlyComparison';
 import type { CsvParseResult } from '../../types/topicmining';
 import { useTopicMiningStore } from '../../stores/useTopicMiningStore';
 
@@ -103,6 +104,11 @@ const TopicMining: React.FC = () => {
                 onViewReport={handleViewReport}
               />
             ),
+          },
+          {
+            key: 'comparison',
+            label: '月度对比',
+            children: <MonthlyComparison />,
           },
         ]}
       />
