@@ -408,7 +408,7 @@ curl -X POST http://localhost:3005/api/collect \
 
 ## 开发团队
 
-- 开发者：Claude Code
+- 开发者：AI效率中心————杨世文
 - 技术支持：请联系系统管理员
 
 ## 许可证

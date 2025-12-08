@@ -79,13 +79,17 @@ const Display: React.FC = () => {
     }
   };
 
+  // 动态计算列配置，根据是否选择了销售来决定显示哪些列
   const columns: ColumnsType<RedLineTypeStat> = [
     { title: '红线类型', dataIndex: 'redLineType', key: 'redLineType' },
     { title: '违规数量', dataIndex: 'violationCount', key: 'violationCount' },
     { title: '占总红线数比', key: 'percentageOfTotal', render: (_, record) => `${record.percentageOfTotal.toFixed(2)}%` },
     { title: '总红线数', render: () => totalViolations },
-    { title: '占总会话比', key: 'percentageOfConversations', render: (_, record) => `${record.percentageOfConversations.toFixed(2)}%` },
-    { title: '总会话数', render: () => totalConversations },
+    // 只有在未选择销售时才显示这两列
+    ...(selectedSales ? [] : [
+      { title: '占总会话比', key: 'percentageOfConversations', render: (_: any, record: RedLineTypeStat) => `${record.percentageOfConversations.toFixed(2)}%` },
+      { title: '总会话数', render: () => totalConversations },
+    ]),
   ];
 
   return (
@@ -111,8 +115,8 @@ const Display: React.FC = () => {
           <Radio.Group value={department} onChange={e => setDepartment(e.target.value)}>
             <Radio value="">全部</Radio>
             <Radio value="cc">CC</Radio>
-            <Radio value="ss">SS</Radio>
-            <Radio value="lp">LP</Radio>
+            <Radio value="ss">EA</Radio>
+            <Radio value="lp">CM</Radio>
           </Radio.Group>
         </div>
 

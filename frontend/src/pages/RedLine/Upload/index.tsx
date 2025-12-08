@@ -73,9 +73,9 @@ const Upload: React.FC = () => {
       return;
     }
 
-    // 验证至少填写一个会话总数
-    if (!ccConversationCount && !lpConversationCount && !ssConversationCount) {
-      message.error('请至少填写一个部门的会话总数（CC/LP/SS）');
+    // 验证必须填写所有部门的会话总数
+    if (!ccConversationCount || !lpConversationCount || !ssConversationCount) {
+      message.error('请填写所有部门（CC、EA、CM）的会话总数');
       return;
     }
 
@@ -178,17 +178,7 @@ const Upload: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label style={{ marginRight: 8 }}>LP会话数:</label>
-                  <InputNumber
-                    min={1}
-                    placeholder="请输入"
-                    value={lpConversationCount}
-                    onChange={setLpConversationCount}
-                    style={{ width: 120 }}
-                  />
-                </div>
-                <div>
-                  <label style={{ marginRight: 8 }}>SS会话数:</label>
+                  <label style={{ marginRight: 8 }}>EA会话数:</label>
                   <InputNumber
                     min={1}
                     placeholder="请输入"
@@ -197,11 +187,21 @@ const Upload: React.FC = () => {
                     style={{ width: 120 }}
                   />
                 </div>
+                <div>
+                  <label style={{ marginRight: 8 }}>CM会话数:</label>
+                  <InputNumber
+                    min={1}
+                    placeholder="请输入"
+                    value={lpConversationCount}
+                    onChange={setLpConversationCount}
+                    style={{ width: 120 }}
+                  />
+                </div>
               </Space>
             </Col>
           </Row>
           <div style={{ marginTop: 8, fontSize: '12px', color: '#999' }}>
-            示例：2025-11-10（周一）至 2025-11-16（周日），至少填写一个部门的会话总数
+            示例：2025-11-10（周一）至 2025-11-16（周日），必须填写所有部门的会话总数
           </div>
           {weekStart && weekEnd && (
             <div style={{ marginTop: 8, color: '#52c41a', fontWeight: 'bold' }}>

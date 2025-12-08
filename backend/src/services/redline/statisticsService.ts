@@ -10,6 +10,7 @@ import type {
   DetailsResult,
   RedLineDetail,
 } from '../../types/redline';
+import conversationCountService from './conversationCountService';
 
 const prisma = new PrismaClient();
 
@@ -45,9 +46,18 @@ export async function getStatistics(
     },
   });
 
-  // 总会话数（按会话ID去重）
-  const uniqueConversations = new Set(records.map(r => r.conversationId));
-  const totalConversations = uniqueConversations.size;
+  // 查询会话总数数据（从 week_conversation_count 表）
+  const conversationCounts = await conversationCountService.getCounts(
+    weekStarts,
+    weekEnds,
+    department ? [department] : undefined  // 如果有部门筛选，只查询该部门；否则查询所有部门
+  );
+
+  // 计算总会话数（多个周、多个部门的总和）
+  const totalConversations = conversationCounts.reduce(
+    (sum, item) => sum + item.conversationCount,
+    0
+  );
 
   // 总红线数
   const totalViolations = records.length;

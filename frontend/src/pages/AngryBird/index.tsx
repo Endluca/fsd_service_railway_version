@@ -11,7 +11,7 @@ import Display from './Display';
 const AngryBird: React.FC = () => {
   return (
     <div style={{ padding: 24 }}>
-      <h2>愤怒小鸟</h2>
+      <h2>愤怒小鸟（测试中）</h2>
       <Tabs
         defaultActiveKey="upload"
         items={[

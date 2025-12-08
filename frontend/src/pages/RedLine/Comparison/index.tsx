@@ -182,8 +182,8 @@ const Comparison: React.FC = () => {
     const labels: Record<string, string> = {
       all: '所有部门',
       cc: 'CC',
-      ss: 'SS',
-      lp: 'LP',
+      ss: 'EA',
+      lp: 'CM',
     };
     return labels[dept] || dept;
   };
@@ -220,7 +220,10 @@ const Comparison: React.FC = () => {
     xField: 'category',
     yField: 'value',
     seriesField: 'type',
+    colorField: 'type',
     isGroup: true,
+
+    appendPadding: [10, 0, 0, 0],
 
     columnStyle: {
       radius: [4, 4, 0, 0],
@@ -228,14 +231,32 @@ const Comparison: React.FC = () => {
 
     label: {
       position: 'top' as const,
+      offset: 4,
+      autoHide: false,
+      layout: [
+        { type: 'interval-adjust-position' },
+        { type: 'interval-hide-overlap' },
+        { type: 'adjust-color' },
+      ],
       style: {
         fill: '#000',
-        opacity: 0.7,
+        opacity: 1,
         fontSize: 12,
+        fontWeight: 'bold',
       },
-      formatter: (datum: any) => {
+      content: (datum: any) => {
         if (datum.value === undefined || datum.value === null) return '';
         return `${datum.value.toFixed(2)}%`;
+      },
+    },
+
+    meta: {
+      category: {
+        alias: '时间周期',
+      },
+      value: {
+        alias: '红线占总会话数的比例 (%)',
+        formatter: (v: number) => `${v}%`,
       },
     },
 
@@ -245,8 +266,11 @@ const Comparison: React.FC = () => {
         autoRotate: false,
       },
       title: {
-        text: '周',
-        style: { fontSize: 14 },
+        text: '时间周期',
+        position: 'center',
+        style: {
+          fontSize: 14,
+        },
       },
     },
 
@@ -255,8 +279,11 @@ const Comparison: React.FC = () => {
         formatter: (v: string) => `${v}%`,
       },
       title: {
-        text: '红线占会话比例',
-        style: { fontSize: 14 },
+        text: '红线占总会话数的比例 (%)',
+        position: 'center',
+        style: {
+          fontSize: 14,
+        },
       },
     },
 
@@ -283,7 +310,10 @@ const Comparison: React.FC = () => {
     xField: 'category',
     yField: 'value',
     seriesField: 'type',
+    colorField: 'type',
     isGroup: true,
+
+    appendPadding: [10, 0, 0, 0],
 
     columnStyle: {
       radius: [4, 4, 0, 0],
@@ -291,16 +321,34 @@ const Comparison: React.FC = () => {
 
     label: {
       position: 'top' as const,
+      offset: 4,
+      autoHide: false,
+      layout: [
+        { type: 'interval-adjust-position' },
+        { type: 'interval-hide-overlap' },
+        { type: 'adjust-color' },
+      ],
       style: {
         fill: '#000',
-        opacity: 0.7,
+        opacity: 1,
         fontSize: 11,
+        fontWeight: 'bold',
       },
-      formatter: (datum: any) => {
+      content: (datum: any) => {
         if (datum.value === undefined || datum.value === null) return '';
         return showMode === 'percentage'
           ? `${datum.value.toFixed(1)}%`
           : String(datum.value);
+      },
+    },
+
+    meta: {
+      category: {
+        alias: '红线违规类型',
+      },
+      value: {
+        alias: showMode === 'percentage' ? '占当周总红线比例 (%)' : '违规次数 (次)',
+        formatter: (v: number) => (showMode === 'percentage' ? `${v}%` : String(v)),
       },
     },
 
@@ -312,8 +360,11 @@ const Comparison: React.FC = () => {
         offset: 10,
       },
       title: {
-        text: '红线类型',
-        style: { fontSize: 14 },
+        text: '红线违规类型',
+        position: 'center',
+        style: {
+          fontSize: 14,
+        },
       },
     },
 
@@ -322,8 +373,11 @@ const Comparison: React.FC = () => {
         formatter: (v: string) => (showMode === 'percentage' ? `${v}%` : v),
       },
       title: {
-        text: showMode === 'percentage' ? '占当周总红线比例' : '违规次数',
-        style: { fontSize: 14 },
+        text: showMode === 'percentage' ? '占当周总红线比例 (%)' : '违规次数 (次)',
+        position: 'center',
+        style: {
+          fontSize: 14,
+        },
       },
     },
 
@@ -394,8 +448,8 @@ const Comparison: React.FC = () => {
                 placeholder="选择部门（默认全部）"
                 options={[
                   { label: 'CC部门', value: 'cc' },
-                  { label: 'SS部门', value: 'ss' },
-                  { label: 'LP部门', value: 'lp' },
+                  { label: 'EA部门', value: 'ss' },
+                  { label: 'CM部门', value: 'lp' },
                 ]}
                 maxTagCount="responsive"
               />
@@ -435,10 +489,44 @@ const Comparison: React.FC = () => {
           <>
             {/* 视图1：总红线趋势 */}
             <Card
-              title="总红线趋势（红线占会话比例）"
+              title="总红线趋势（红线占总会话数的比例）"
               style={{ marginBottom: 24 }}
             >
-              <Column {...overallChartConfig} />
+              <div style={{ position: 'relative', paddingLeft: 50, paddingBottom: 10 }}>
+                {/* Y轴标题 */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: -30,
+                    top: '50%',
+                    transform: 'translateY(-50%) rotate(-90deg)',
+                    fontSize: 14,
+                    fontWeight: 'bold',
+                    color: '#000',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  红线占总会话数的比例 (%)
+                </div>
+
+                {/* 图表 */}
+                <Column {...overallChartConfig} height={400} />
+
+                {/* X轴标题 */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: 5,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    fontSize: 14,
+                    fontWeight: 'bold',
+                    color: '#000',
+                  }}
+                >
+                  时间周期
+                </div>
+              </div>
             </Card>
 
             {/* 视图2：各红线趋势 */}
@@ -455,7 +543,41 @@ const Comparison: React.FC = () => {
                 </Radio.Group>
               }
             >
-              <Column {...redLineChartConfig} />
+              <div style={{ position: 'relative', paddingLeft: 50, paddingBottom: 10 }}>
+                {/* Y轴标题 */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: -20,
+                    top: '50%',
+                    transform: 'translateY(-50%) rotate(-90deg)',
+                    fontSize: 14,
+                    fontWeight: 'bold',
+                    color: '#000',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {showMode === 'percentage' ? '占当周总红线比例 (%)' : '违规次数 (次)'}
+                </div>
+
+                {/* 图表 */}
+                <Column {...redLineChartConfig} height={400} />
+
+                {/* X轴标题 */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: 5,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    fontSize: 14,
+                    fontWeight: 'bold',
+                    color: '#000',
+                  }}
+                >
+                  红线违规类型
+                </div>
+              </div>
             </Card>
           </>
         ) : (

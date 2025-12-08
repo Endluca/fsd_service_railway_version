@@ -76,7 +76,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
       });
     }
 
-    // 验证会话总数: 至少填写一个部门的会话总数
+    // 验证会话总数: 必须填写所有部门的会话总数
     const conversationCounts = [];
     if (ccConversationCount) {
       const count = parseInt(ccConversationCount);
@@ -124,10 +124,10 @@ router.post('/upload', upload.single('file'), async (req, res) => {
       });
     }
 
-    if (conversationCounts.length === 0) {
+    if (conversationCounts.length !== 3) {
       return res.json({
         code: 1,
-        message: '请至少填写一个部门的会话总数（cc/lp/ss）',
+        message: '请填写所有部门（CC、SS、LP）的会话总数',
       });
     }
 

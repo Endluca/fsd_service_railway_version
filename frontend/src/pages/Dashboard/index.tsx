@@ -398,9 +398,9 @@ const Dashboard: React.FC = () => {
         </Space>
 
         <Space>
-          <Text>销售BCM:</Text>
+          <Text>销售CM:</Text>
           <Select
-            placeholder="全部BCM"
+            placeholder="全部CM"
             style={{ width: 300 }}
             mode="multiple"
             allowClear
@@ -456,8 +456,8 @@ const Dashboard: React.FC = () => {
                       summary.overallTimelyRate >= 80
                         ? '#52c41a'
                         : summary.overallTimelyRate >= 60
-                        ? '#faad14'
-                        : '#ff4d4f',
+                          ? '#faad14'
+                          : '#ff4d4f',
                   }}
                 />
               </Col>
@@ -472,8 +472,8 @@ const Dashboard: React.FC = () => {
                       summary.overallOvertimeRate <= 20
                         ? '#52c41a'
                         : summary.overallOvertimeRate <= 40
-                        ? '#faad14'
-                        : '#ff4d4f',
+                          ? '#faad14'
+                          : '#ff4d4f',
                   }}
                 />
               </Col>

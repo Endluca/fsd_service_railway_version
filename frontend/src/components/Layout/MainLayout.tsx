@@ -46,12 +46,12 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     {
       key: '/angrybird',
       icon: <ThunderboltOutlined />,
-      label: '愤怒小鸟',
+      label: '愤怒小鸟（测试中）',
     },
     {
       key: '/socialmedia',
       icon: <GlobalOutlined />,
-      label: '社媒声音',
+      label: '社媒声音（测试中）',
     },
   ];
 
