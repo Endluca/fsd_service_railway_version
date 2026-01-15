@@ -1,17 +1,17 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import multer from 'multer';
-import csvService from '../../services/topicmining/csvService';
+import fileParserService from '../../services/topicmining/fileParserService';
 import reportService from '../../services/topicmining/reportService';
 import type { ReportPayload } from '../../types/topicmining/report';
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
+  limits: { fileSize: 150 * 1024 * 1024 }, // 150MB
 });
 
 export const reportsRouter = Router();
 
-// POST /api/topicmining/reports/parse - 解析 CSV 文件
+// POST /api/topicmining/reports/parse - 解析数据文件(支持CSV、XLSX、XLS)
 reportsRouter.post(
   '/parse',
   upload.single('file'),
@@ -20,18 +20,22 @@ reportsRouter.post(
       if (!req.file) {
         return res.status(400).json({
           code: 400,
-          message: '缺少 CSV 文件',
+          message: '缺少文件',
         });
       }
 
-      const result = await csvService.parseCsv(req.file.buffer);
+      const result = await fileParserService.parseFile(
+        req.file.buffer,
+        req.file.originalname,
+        req.file.mimetype
+      );
       res.json({
         code: 0,
         message: 'success',
         data: result,
       });
     } catch (error: any) {
-      console.error('CSV 解析失败:', error);
+      console.error('文件解析失败:', error);
       res.status(error.status || 500).json({
         code: error.status || 500,
         message: error.message || '服务器错误',

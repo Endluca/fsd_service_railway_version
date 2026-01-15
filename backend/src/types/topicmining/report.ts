@@ -9,7 +9,7 @@ export interface CsvRawRow {
 }
 
 export interface CsvParseWarning {
-  type: 'missing_required_columns' | 'invalid_row' | 'empty_field' | 'duplicate_removed';
+  type: 'missing_required_columns' | 'invalid_row' | 'empty_field' | 'duplicate_removed' | 'info';
   message: string;
 }
 

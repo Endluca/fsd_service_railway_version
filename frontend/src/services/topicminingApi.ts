@@ -10,7 +10,7 @@ import type {
 
 const client = axios.create({
   baseURL: '/api/topicmining',
-  timeout: 60000, // CSV 解析可能需要较长时间
+  timeout: 60000, // 文件解析可能需要较长时间
 });
 
 // 响应拦截器：提取 data 字段
@@ -23,7 +23,7 @@ client.interceptors.response.use(
 );
 
 /**
- * 解析 CSV 文件
+ * 解析数据文件(支持CSV、Excel格式)
  */
 export async function parseCsvFile(file: File): Promise<CsvParseResult> {
   const formData = new FormData();

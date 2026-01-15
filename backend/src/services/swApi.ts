@@ -22,17 +22,14 @@ class SwApiClient {
 
     // 配置重试策略（优化：增强重试机制）
     axiosRetry(this.client, {
-      retries: 5, // 重试5次（从3次增加）
+      retries: 10, // 重试10次（网络问题重试，业务错误不重试）
       retryDelay: axiosRetry.exponentialDelay,
       retryCondition: (error) => {
-        // 网络错误、超时、限流都会重试
+        // 只重试网络错误、超时、限流，不重试业务错误（如404）
         return axiosRetry.isNetworkOrIdempotentRequestError(error) ||
           error.response?.status === 429 || // 限流
           error.code === 'ECONNABORTED' || // 超时
           error.code === 'ETIMEDOUT'; // 超时
-      },
-      onRetry: (retryCount, error, requestConfig) => {
-        console.log(`重试 API 请求 (${retryCount}/5): ${requestConfig.url}`);
       },
     });
 
@@ -44,15 +41,12 @@ class SwApiClient {
 
     // 为下载客户端配置重试
     axiosRetry(this.downloadClient, {
-      retries: 3, // ASR文件下载重试3次
+      retries: 10, // ASR文件下载重试10次
       retryDelay: axiosRetry.exponentialDelay,
       retryCondition: (error) => {
         return axiosRetry.isNetworkOrIdempotentRequestError(error) ||
           error.code === 'ECONNABORTED' ||
           error.code === 'ETIMEDOUT';
-      },
-      onRetry: (retryCount, error) => {
-        console.log(`重试下载ASR文件 (${retryCount}/3)`);
       },
     });
 
@@ -146,16 +140,53 @@ class SwApiClient {
       return {
         conversationType: conversation_type,
         asrData: asrResponse.data, // ASR数据数组
+        success: true,
       };
     } catch (error: any) {
-      // 只有转录未完成才返回null，其他错误会被重试机制处理
+      // 返回详细的错误信息
+      const errorInfo: any = {
+        success: false,
+        conversationType: null,
+        asrData: null,
+      };
+
+      // 转录未完成
       if (error.response?.data?.code === 501200) {
         console.warn(`会话 ${originConversationId} 转录未完成`);
-        return null;
+        errorInfo.errorCode = 501200;
+        errorInfo.errorReason = '转录未完成';
+        errorInfo.errorMessage = error.response?.data?.msg || '会话转录正在进行中，尚未完成';
+        return errorInfo;
       }
-      // 重试失败后，记录警告并返回null（不阻塞其他会话）
-      console.warn(`会话 ${originConversationId} 获取ASR失败: ${error.message}`);
-      return null;
+
+      // 获取ASR文件URL失败
+      if (error.config?.url?.includes('/asr_data')) {
+        errorInfo.errorReason = '获取ASR文件URL失败';
+        errorInfo.errorCode = error.response?.data?.code || error.code || 'UNKNOWN';
+        errorInfo.errorMessage = error.response?.data?.msg || error.message || '未知错误';
+        errorInfo.httpStatus = error.response?.status;
+        console.warn(`会话 ${originConversationId} 获取ASR文件URL失败: ${errorInfo.errorMessage}`);
+        return errorInfo;
+      }
+
+      // 下载ASR文件内容失败
+      errorInfo.errorReason = '下载ASR文件失败';
+      errorInfo.errorCode = error.code || 'UNKNOWN';
+      errorInfo.errorMessage = error.message || '未知错误';
+      errorInfo.httpStatus = error.response?.status;
+      
+      // 检查是否是超时
+      if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+        errorInfo.errorReason = '下载ASR文件超时';
+      }
+      
+      // 检查是否是网络错误
+      if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
+        errorInfo.errorReason = '网络连接失败';
+      }
+
+      console.warn(`会话 ${originConversationId} ${errorInfo.errorReason}: ${errorInfo.errorMessage}`);
+      return errorInfo;
     }
   }
 
@@ -170,6 +201,26 @@ class SwApiClient {
     } catch (error: any) {
       if (error.response?.data?.code === 401154) {
         console.warn(`用户 ${openUserId} 不存在`);
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * 获取部门信息
+   * @param departmentId 部门ID
+   */
+  async getDepartmentInfo(departmentId: number) {
+    try {
+      const response = await this.client.get(
+        `/openapi/organization/v1/departments/${departmentId}`
+      );
+      return response.data.data.department;
+    } catch (error: any) {
+      // 部门不存在
+      if (error.response?.data?.code === 401103) {
+        console.warn(`部门 ${departmentId} 不存在`);
         return null;
       }
       throw error;

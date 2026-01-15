@@ -3,7 +3,7 @@ import { Prisma } from '@prisma/client';
 
 /**
  * 数据查询服务
- * 负责查询和聚合数据，支持缓存
+ * 负责查询和聚合数据（实时计算，不使用缓存）
  */
 export class DataService {
   /**
@@ -21,105 +21,94 @@ export class DataService {
   ) {
     console.log(`查询数据: ${startDate} ~ ${endDate}, 小组: ${groupNames?.join(',') || '全部'}, 销售: ${openUserIds?.join(',') || '全部'}`);
 
-    // 1. 先尝试从缓存获取（仅当查询单个销售时使用缓存）
-    if (openUserIds && openUserIds.length === 1 && (!groupNames || groupNames.length === 0)) {
-      const cachedResults = await this.getCachedResults(startDate, endDate, undefined, openUserIds[0]);
-      if (cachedResults) {
-        console.log('使用缓存数据');
-        return cachedResults;
-      }
-    }
-
-    // 2. 从数据库计算
+    // 直接从数据库实时计算
     const results = await this.calculateResults(startDate, endDate, groupNames, openUserIds);
-
-    // 3. 保存缓存
-    await this.saveCacheResults(results, startDate, endDate);
 
     return results;
   }
 
   /**
-   * 从缓存获取结果
+   * 从缓存获取结果（已禁用）
+   * 注释掉的代码保留以便未来需要重新启用缓存功能
    */
-  private async getCachedResults(
-    startDate: string,
-    endDate: string,
-    groupName?: string,
-    openUserId?: string
-  ) {
-    // 如果指定了销售ID，从缓存表查询
-    if (openUserId) {
-      const cache = await prisma.dateRangeCache.findUnique({
-        where: {
-          startDate_endDate_openUserId: {
-            startDate: new Date(startDate),
-            endDate: new Date(endDate),
-            openUserId,
-          },
-        },
-        include: {
-          salesPerson: true,
-        },
-      });
+  // private async getCachedResults(
+  //   startDate: string,
+  //   endDate: string,
+  //   groupName?: string,
+  //   openUserId?: string
+  // ) {
+  //   // 如果指定了销售ID，从缓存表查询
+  //   if (openUserId) {
+  //     const cache = await prisma.dateRangeCache.findUnique({
+  //       where: {
+  //         startDate_endDate_openUserId: {
+  //           startDate: new Date(startDate),
+  //           endDate: new Date(endDate),
+  //           openUserId,
+  //         },
+  //       },
+  //       include: {
+  //         salesPerson: true,
+  //       },
+  //     });
 
-      if (cache) {
-        return [{
-          openUserId: cache.openUserId,
-          name: cache.salesPerson.name,
-          groupName: cache.salesPerson.groupName,
-          customerTurnCount: cache.customerTurnCount,
-          timelyReplyRate: Number(cache.timelyReplyRate),
-          overtimeReplyRate: Number(cache.overtimeReplyRate),
-          avgReplyDuration: Number(cache.avgReplyDuration),
-          newRuleCustomerTurnCount: cache.newRuleCustomerTurnCount,
-          overtimeReplyCount: cache.overtimeReplyCount,
-          overtimeNoReplyCount: cache.overtimeNoReplyCount,
-          conversationCount: cache.conversationCount,
-        }];
-      }
-    }
+  //     if (cache) {
+  //       return [{
+  //         openUserId: cache.openUserId,
+  //         name: cache.salesPerson.name,
+  //         groupName: cache.salesPerson.groupName,
+  //         customerTurnCount: cache.customerTurnCount,
+  //         timelyReplyRate: Number(cache.timelyReplyRate),
+  //         overtimeReplyRate: Number(cache.overtimeReplyRate),
+  //         avgReplyDuration: Number(cache.avgReplyDuration),
+  //         newRuleCustomerTurnCount: cache.newRuleCustomerTurnCount,
+  //         overtimeReplyCount: cache.overtimeReplyCount,
+  //         overtimeNoReplyCount: cache.overtimeNoReplyCount,
+  //         conversationCount: cache.conversationCount,
+  //       }];
+  //     }
+  //   }
 
-    // 如果没有指定销售，检查是否所有销售都有缓存
-    const allSales = await this.getAllSalesInDateRange(startDate, endDate, groupName ? [groupName] : undefined);
-    if (allSales.length === 0) {
-      return [];
-    }
+  //   // 如果没有指定销售，检查是否所有销售都有缓存
+  //   const allSales = await this.getAllSalesInDateRange(startDate, endDate, groupName ? [groupName] : undefined);
+  //   if (allSales.length === 0) {
+  //     return [];
+  //   }
 
-    const caches = await prisma.dateRangeCache.findMany({
-      where: {
-        startDate: new Date(startDate),
-        endDate: new Date(endDate),
-        openUserId: {
-          in: allSales.map(s => s.openUserId),
-        },
-      },
-      include: {
-        salesPerson: true,
-      },
-    });
+  //   const caches = await prisma.dateRangeCache.findMany({
+  //     where: {
+  //       startDate: new Date(startDate),
+  //       endDate: new Date(endDate),
+  //       openUserId: {
+  //         in: allSales.map(s => s.openUserId),
+  //       },
+  //     },
+  //     include: {
+  //       salesPerson: true,
+  //     },
+  //   });
 
-    // 如果缓存数量匹配，返回缓存
-    if (caches.length === allSales.length) {
-      return caches
-        .filter(c => !groupName || c.salesPerson.groupName === groupName)
-        .map(cache => ({
-          openUserId: cache.openUserId,
-          name: cache.salesPerson.name,
-          groupName: cache.salesPerson.groupName,
-          customerTurnCount: cache.customerTurnCount,
-          timelyReplyRate: Number(cache.timelyReplyRate),
-          overtimeReplyRate: Number(cache.overtimeReplyRate),
-          avgReplyDuration: Number(cache.avgReplyDuration),
-          newRuleCustomerTurnCount: cache.newRuleCustomerTurnCount,
-          overtimeReplyCount: cache.overtimeReplyCount,
-          overtimeNoReplyCount: cache.overtimeNoReplyCount,
-          conversationCount: cache.conversationCount,
-        }));
-    }
+  //   // 如果缓存数量匹配，返回缓存
+  //   if (caches.length === allSales.length) {
+  //     return caches
+  //       .filter(c => !groupName || c.salesPerson.groupName === groupName)
+  //       .map(cache => ({
+  //         openUserId: cache.openUserId,
+  //         name: cache.salesPerson.name,
+  //         groupName: cache.salesPerson.groupName,
+  //         customerTurnCount: cache.customerTurnCount,
+  //         timelyReplyRate: Number(cache.timelyReplyRate),
+  //         overtimeReplyRate: Number(cache.overtimeReplyRate),
+  //         avgReplyDuration: Number(cache.avgReplyDuration),
+  //         newRuleCustomerTurnCount: cache.newRuleCustomerTurnCount,
+  //         overtimeReplyCount: cache.overtimeReplyCount,
+  //         overtimeNoReplyCount: cache.overtimeNoReplyCount,
+  //         conversationCount: cache.conversationCount,
+  //       }));
+  //   }
 
-    return null;
-  }
+  //   return null;
+  // }
 
   /**
    * 计算结果
@@ -165,7 +154,7 @@ export class DataService {
 
     for (const metric of dailyMetrics) {
       const { openUserId, customerTurnCount, timelyReplyCount, overtimeReplyCount, totalReplyDuration, newRuleCustomerTurnCount, overtimeNoReplyCount } = metric;
-      const { name, groupName: salesGroupName } = metric.salesPerson;
+      const { megName: name, departmentName: salesGroupName } = metric.salesPerson;
 
       // 如果指定了小组过滤
       if (groupNames && groupNames.length > 0 && !groupNames.includes(salesGroupName || '')) {
@@ -228,106 +217,116 @@ export class DataService {
   }
 
   /**
-   * 保存缓存结果
+   * 保存缓存结果（已禁用）
+   * 注释掉的代码保留以便未来需要重新启用缓存功能
    */
-  private async saveCacheResults(
-    results: any[],
-    startDate: string,
-    endDate: string
-  ) {
-    for (const result of results) {
-      try {
-        await prisma.dateRangeCache.upsert({
-          where: {
-            startDate_endDate_openUserId: {
-              startDate: new Date(startDate),
-              endDate: new Date(endDate),
-              openUserId: result.openUserId,
-            },
-          },
-          create: {
-            startDate: new Date(startDate),
-            endDate: new Date(endDate),
-            openUserId: result.openUserId,
-            customerTurnCount: result.customerTurnCount,
-            timelyReplyRate: result.timelyReplyRate,
-            overtimeReplyRate: result.overtimeReplyRate,
-            avgReplyDuration: result.avgReplyDuration,
-            newRuleCustomerTurnCount: result.newRuleCustomerTurnCount,
-            overtimeReplyCount: result.overtimeReplyCount,
-            overtimeNoReplyCount: result.overtimeNoReplyCount,
-            conversationCount: result.conversationCount,
-          },
-          update: {
-            customerTurnCount: result.customerTurnCount,
-            timelyReplyRate: result.timelyReplyRate,
-            overtimeReplyRate: result.overtimeReplyRate,
-            avgReplyDuration: result.avgReplyDuration,
-            newRuleCustomerTurnCount: result.newRuleCustomerTurnCount,
-            overtimeReplyCount: result.overtimeReplyCount,
-            overtimeNoReplyCount: result.overtimeNoReplyCount,
-            conversationCount: result.conversationCount,
-          },
-        });
-      } catch (error) {
-        console.error(`保存缓存失败 (${result.openUserId}):`, error);
-      }
-    }
+  // private async saveCacheResults(
+  //   results: any[],
+  //   startDate: string,
+  //   endDate: string
+  // ) {
+  //   for (const result of results) {
+  //     try {
+  //       await prisma.dateRangeCache.upsert({
+  //         where: {
+  //           startDate_endDate_openUserId: {
+  //             startDate: new Date(startDate),
+  //             endDate: new Date(endDate),
+  //             openUserId: result.openUserId,
+  //           },
+  //         },
+  //         create: {
+  //           startDate: new Date(startDate),
+  //           endDate: new Date(endDate),
+  //           openUserId: result.openUserId,
+  //           customerTurnCount: result.customerTurnCount,
+  //           timelyReplyRate: result.timelyReplyRate,
+  //           overtimeReplyRate: result.overtimeReplyRate,
+  //           avgReplyDuration: result.avgReplyDuration,
+  //           newRuleCustomerTurnCount: result.newRuleCustomerTurnCount,
+  //           overtimeReplyCount: result.overtimeReplyCount,
+  //           overtimeNoReplyCount: result.overtimeNoReplyCount,
+  //           conversationCount: result.conversationCount,
+  //         },
+  //         update: {
+  //           customerTurnCount: result.customerTurnCount,
+  //           timelyReplyRate: result.timelyReplyRate,
+  //           overtimeReplyRate: result.overtimeReplyRate,
+  //           avgReplyDuration: result.avgReplyDuration,
+  //           newRuleCustomerTurnCount: result.newRuleCustomerTurnCount,
+  //           overtimeReplyCount: result.overtimeReplyCount,
+  //           overtimeNoReplyCount: result.overtimeNoReplyCount,
+  //           conversationCount: result.conversationCount,
+  //         },
+  //       });
+  //     } catch (error) {
+  //       console.error(`保存缓存失败 (${result.openUserId}):`, error);
+  //     }
+  //   }
 
-    console.log(`已缓存 ${results.length} 条数据`);
-  }
+  //   console.log(`已缓存 ${results.length} 条数据`);
+  // }
 
   /**
-   * 获取日期范围内的所有销售
+   * 获取日期范围内的所有销售（已禁用）
+   * 注释掉的代码保留以便未来需要重新启用缓存功能
    */
-  private async getAllSalesInDateRange(
-    startDate: string,
-    endDate: string,
-    groupNames?: string[]
-  ) {
-    const where: Prisma.DailyMetricWhereInput = {
-      date: {
-        gte: new Date(startDate),
-        lte: new Date(endDate),
-      },
-    };
+  // private async getAllSalesInDateRange(
+  //   startDate: string,
+  //   endDate: string,
+  //   groupNames?: string[]
+  // ) {
+  //   const where: Prisma.DailyMetricWhereInput = {
+  //     date: {
+  //       gte: new Date(startDate),
+  //       lte: new Date(endDate),
+  //     },
+  //   };
 
-    const metrics = await prisma.dailyMetric.findMany({
-      where,
-      select: {
-        openUserId: true,
-      },
-      distinct: ['openUserId'],
-    });
+  //   const metrics = await prisma.dailyMetric.findMany({
+  //     where,
+  //     select: {
+  //       openUserId: true,
+  //     },
+  //     distinct: ['openUserId'],
+  //   });
 
-    return metrics;
-  }
+  //   return metrics;
+  // }
 
   /**
-   * 获取所有小组列表
+   * 获取所有部门列表（用于前端小组筛选）
+   * 修改：从department_name去重，而不是group_name
    */
   async getGroups() {
-    const groups = await prisma.salesPerson.findMany({
+    const departments = await prisma.salesPerson.findMany({
       where: {
-        groupName: {
-          not: null,
+        departmentName: {
+          not: '默认值', // 排除未成功获取部门信息的记录
         },
       },
       select: {
-        groupName: true,
+        departmentName: true,
       },
-      distinct: ['groupName'],
+      distinct: ['departmentName'],
+      orderBy: {
+        departmentName: 'asc',
+      },
     });
 
-    return groups.map(g => g.groupName).filter(Boolean);
+    return departments
+      .map((d) => d.departmentName)
+      .filter(Boolean)
+      .filter((dept) => dept !== '默认值');
   }
 
   /**
    * 获取销售列表
-   * @param groupNames 小组名称数组（可选）
+   * @param groupNames 部门名称数组（可选）
    * @param startDate 开始日期（可选，格式：YYYY-MM-DD）
    * @param endDate 结束日期（可选，格式：YYYY-MM-DD）
    * @returns 销售列表。如果提供日期范围，则只返回该时间范围内有数据的销售
+   * 修改：字段名从name/groupName改为megName/departmentName
    */
   async getSalesList(groupNames?: string[], startDate?: string, endDate?: string) {
     // 如果提供了日期范围，只返回该时间范围内有数据的销售
@@ -344,18 +343,19 @@ export class DataService {
       };
 
       if (groupNames && groupNames.length > 0) {
-        where.groupName = { in: groupNames };
+        where.departmentName = { in: groupNames }; // 从groupName改为departmentName
       }
 
       const sales = await prisma.salesPerson.findMany({
         where,
         select: {
           openUserId: true,
-          name: true,
-          groupName: true,
+          megName: true, // 从name改为megName
+          departmentName: true, // 从groupName改为departmentName
+          status: true, // 新增状态字段
         },
         orderBy: {
-          name: 'asc',
+          megName: 'asc', // 从name改为megName
         },
       });
 
@@ -365,18 +365,19 @@ export class DataService {
     // 如果没有提供日期范围，返回所有销售（原有逻辑）
     const where: Prisma.SalesPersonWhereInput = {};
     if (groupNames && groupNames.length > 0) {
-      where.groupName = { in: groupNames };
+      where.departmentName = { in: groupNames }; // 从groupName改为departmentName
     }
 
     const sales = await prisma.salesPerson.findMany({
       where,
       select: {
         openUserId: true,
-        name: true,
-        groupName: true,
+        megName: true, // 从name改为megName
+        departmentName: true, // 从groupName改为departmentName
+        status: true, // 新增状态字段
       },
       orderBy: {
-        name: 'asc',
+        megName: 'asc', // 从name改为megName
       },
     });
 

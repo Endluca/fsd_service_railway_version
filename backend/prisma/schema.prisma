@@ -11,15 +11,33 @@ datasource db {
 
 // 销售人员信息表
 model SalesPerson {
-  id           Int            @id @default(autoincrement())
-  openUserId   String         @unique @map("open_user_id") @db.VarChar(100)
-  name         String         @db.VarChar(100)
-  groupName    String?        @map("group_name") @db.VarChar(100)
-  createdAt    DateTime       @default(now()) @map("created_at")
-  updatedAt    DateTime       @updatedAt @map("updated_at")
+  id                  Int             @id @default(autoincrement())
+  openUserId          String          @unique @map("open_user_id") @db.VarChar(100)
+  megName             String          @map("meg_name") @db.VarChar(100)  // 来自销售API的姓名
+  mainDepartmentId    Int             @map("main_department_id")        // 主部门ID
+  isDelete            Boolean         @default(false) @map("is_delete") // 是否离职
+  status              String          @default("正常") @map("status") @db.VarChar(20)  // 状态：正常/用户不存在
+  
+  // 来自部门API的信息
+  departmentName      String          @default("默认值") @map("department_name") @db.VarChar(100)  // 部门名称
+  parentDepartmentId  Int             @default(0) @map("parent_department_id")          // 父部门ID
+  leadOpenUserId      String          @default("默认值") @map("lead_open_user_id") @db.VarChar(100)  // 部门负责人
+  
+  // 同步日志
+  logInfo             String?         @map("log_info") @db.Text        // 同步错误日志（JSON数组）
+  
+  createdAt           DateTime        @default(now()) @map("created_at")
+  updatedAt           DateTime        @updatedAt @map("updated_at")
 
-  dailyMetrics DailyMetric[]
-  cacheRecords DateRangeCache[]
+  // 关系
+  dailyMetrics        DailyMetric[]
+  cacheRecords        DateRangeCache[]
+
+  // 索引
+  @@index([megName])
+  @@index([departmentName])
+  @@index([status])
+  @@index([mainDepartmentId])
 
   @@map("sales_person")
 }

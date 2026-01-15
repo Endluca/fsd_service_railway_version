@@ -4,7 +4,7 @@
 
 import express from 'express';
 import multer from 'multer';
-import { parseXlsxFile } from '../../services/redline/xlsxParser';
+import { parseFile } from '../../services/redline/fileParser';
 import redLineService from '../../services/redline/redLineService';
 import statisticsService from '../../services/redline/statisticsService';
 import conversationCountService from '../../services/redline/conversationCountService';
@@ -19,14 +19,16 @@ const upload = multer({
     fileSize: 10 * 1024 * 1024, // 10MB 限制
   },
   fileFilter: (req, file, cb) => {
-    // 只允许 xlsx 文件
-    if (
-      file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
-      file.originalname.endsWith('.xlsx')
-    ) {
+    // 允许 CSV、XLSX、XLS 文件
+    const validExtensions = ['.csv', '.xlsx', '.xls'];
+    const isValid = validExtensions.some(ext =>
+      file.originalname.toLowerCase().endsWith(ext)
+    );
+
+    if (isValid) {
       cb(null, true);
     } else {
-      cb(new Error('只支持 .xlsx 格式的文件'));
+      cb(new Error('只支持 CSV、XLSX、XLS 格式的文件'));
     }
   },
 });
@@ -144,8 +146,8 @@ router.post('/upload', upload.single('file'), async (req, res) => {
       }
     }
 
-    // 解析 Excel 文件
-    const parseResult = parseXlsxFile(file.buffer);
+    // 解析文件(支持 CSV、XLSX、XLS)
+    const parseResult = parseFile(file.buffer, file.originalname);
 
     if (!parseResult.success) {
       return res.json({

@@ -16,20 +16,24 @@ const CsvUploader: React.FC<CsvUploaderProps> = ({ onParseSuccess }) => {
 
   const uploadProps: UploadProps = {
     name: 'file',
-    accept: '.csv',
+    accept: '.csv,.xlsx,.xls',
     multiple: false,
     showUploadList: false,
     beforeUpload: async (file) => {
       // 验证文件类型
-      if (!file.name.endsWith('.csv')) {
-        message.error('只支持 CSV 文件');
+      const validExtensions = ['.csv', '.xlsx', '.xls'];
+      const isValidType = validExtensions.some((ext) =>
+        file.name.toLowerCase().endsWith(ext)
+      );
+      if (!isValidType) {
+        message.error('只支持 CSV、XLSX 和 XLS 文件');
         return false;
       }
 
-      // 验证文件大小（限制 50MB）
-      const maxSize = 50 * 1024 * 1024;
+      // 验证文件大小（限制 150MB）
+      const maxSize = 150 * 1024 * 1024;
       if (file.size > maxSize) {
-        message.error('文件大小不能超过 50MB');
+        message.error('文件大小不能超过 150MB');
         return false;
       }
 
@@ -37,10 +41,10 @@ const CsvUploader: React.FC<CsvUploaderProps> = ({ onParseSuccess }) => {
 
       try {
         const result = await parseCsvFile(file);
-        message.success('CSV 文件解析成功');
+        message.success('文件解析成功');
         onParseSuccess(result, file);
       } catch (error: any) {
-        message.error(error.message || 'CSV 文件解析失败');
+        message.error(error.message || '文件解析失败');
       } finally {
         setUploading(false);
       }
@@ -53,7 +57,7 @@ const CsvUploader: React.FC<CsvUploaderProps> = ({ onParseSuccess }) => {
     <div>
       <Alert
         message="上传说明"
-        description="请上传包含话题挖掘数据的 CSV 文件，文件大小不超过 50MB。CSV 文件应包含以下列：话题名称、一级类目、二级类目、上下文等。"
+        description="请上传包含话题挖掘数据的文件(支持 CSV、XLSX、XLS 格式)，文件大小不超过 150MB。文件应包含以下列：话题名称、所属父类、所属子类、上下文片段等。"
         type="info"
         showIcon
         style={{ marginBottom: 16 }}
@@ -63,9 +67,9 @@ const CsvUploader: React.FC<CsvUploaderProps> = ({ onParseSuccess }) => {
         <p className="ant-upload-drag-icon">
           <InboxOutlined />
         </p>
-        <p className="ant-upload-text">点击或拖拽 CSV 文件到此区域上传</p>
+        <p className="ant-upload-text">点击或拖拽文件到此区域上传</p>
         <p className="ant-upload-hint">
-          支持单个 CSV 文件上传，文件大小不超过 50MB
+          支持 CSV、Excel(.xlsx/.xls)格式，文件大小不超过 150MB
         </p>
       </Dragger>
 

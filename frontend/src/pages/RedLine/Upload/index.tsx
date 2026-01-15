@@ -211,14 +211,17 @@ const Upload: React.FC = () => {
         </div>
 
         <div>
-          <h4>上传Excel文件</h4>
+          <h4>上传数据文件</h4>
           <Dragger
             fileList={fileList}
             beforeUpload={(file) => {
               // 验证文件类型
-              const isXlsx = file.name.endsWith('.xlsx');
-              if (!isXlsx) {
-                message.error('只能上传 .xlsx 格式的文件！');
+              const validExtensions = ['.csv', '.xlsx', '.xls'];
+              const isValid = validExtensions.some(ext =>
+                file.name.toLowerCase().endsWith(ext)
+              );
+              if (!isValid) {
+                message.error('只支持 CSV、XLSX、XLS 格式的文件！');
                 return false;
               }
 
@@ -239,13 +242,13 @@ const Upload: React.FC = () => {
               setCurrentFile(null);
             }}
             maxCount={1}
-            accept=".xlsx"
+            accept=".csv,.xlsx,.xls"
           >
             <p className="ant-upload-drag-icon">
               <InboxOutlined />
             </p>
             <p className="ant-upload-text">点击或拖拽文件到此区域上传</p>
-            <p className="ant-upload-hint">仅支持 .xlsx 格式文件，必需列：会话ID、客户、销售、成员所属部门、红线类型、原文</p>
+            <p className="ant-upload-hint">支持 CSV、Excel(.xlsx/.xls)格式，必需列：会话ID、客户、销售、成员所属部门、红线类型、原文</p>
           </Dragger>
         </div>
 

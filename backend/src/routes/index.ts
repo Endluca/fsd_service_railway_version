@@ -102,10 +102,19 @@ router.get('/sales', async (req: Request, res: Response) => {
       startDate as string | undefined,
       endDate as string | undefined
     );
+
+    // 字段映射：数据库字段(megName/departmentName) -> 前端字段(name/groupName)
+    const result = sales.map((s) => ({
+      openUserId: s.openUserId,
+      name: s.megName,              // 映射到前端的 name 字段
+      groupName: s.departmentName,  // 映射到前端的 groupName 字段
+      status: s.status,             // 新增状态字段
+    }));
+
     res.json({
       code: 0,
       message: 'success',
-      data: sales,
+      data: result,
     });
   } catch (error: any) {
     console.error('获取销售列表失败:', error);

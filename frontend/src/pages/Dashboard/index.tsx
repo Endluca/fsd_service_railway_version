@@ -154,11 +154,15 @@ const Dashboard: React.FC = () => {
   // 从store获取状态和actions
   const {
     dateRange,
+    selectedTeams,
+    selectedRegions,
     selectedGroups,
     selectedSales,
     data,
     pagination,
     setDateRange,
+    setSelectedTeams,
+    setSelectedRegions,
     setSelectedGroups,
     setSelectedSales,
     setData,
@@ -167,13 +171,72 @@ const Dashboard: React.FC = () => {
 
   // 本地状态（不需要持久化的状态）
   const [loading, setLoading] = useState(false);
-  const [groups, setGroups] = useState<string[]>([]);
+  const [allGroups, setAllGroups] = useState<string[]>([]); // 所有小组
+  const [groups, setGroups] = useState<string[]>([]); // 过滤后的小组列表
   const [salesList, setSalesList] = useState<{ openUserId: string; name: string; groupName: string | null }[]>([]);
+
+  // 团队和地区选项
+  const teamOptions = [
+    { label: 'CC', value: 'CC' },
+    { label: 'EA', value: 'EA' },
+    { label: 'CM', value: 'CM' },
+  ];
+
+  const regionOptions = [
+    { label: '约旦', value: '约旦' },
+    { label: '埃及', value: '埃及' },
+  ];
+
+  // 根据小组名判断团队
+  const getTeamByGroupName = (groupName: string): string | null => {
+    if (groupName.includes('CC')) return 'CC';
+    if (groupName.includes('SS')) return 'EA';
+    if (groupName.includes('LP')) return 'CM';
+    return null;
+  };
+
+  // 根据小组名判断地区
+  const getRegionByGroupName = (groupName: string): string | null => {
+    if (groupName.includes('JO')) return '约旦';
+    if (groupName.includes('EG')) return '埃及';
+    return null;
+  };
 
   // 加载小组列表
   useEffect(() => {
     loadGroups();
   }, []);
+
+  // 根据团队和地区过滤小组列表
+  useEffect(() => {
+    let filteredGroups = [...allGroups];
+
+    // 根据团队过滤
+    if (selectedTeams.length > 0) {
+      filteredGroups = filteredGroups.filter(group => {
+        const team = getTeamByGroupName(group);
+        return team && selectedTeams.includes(team);
+      });
+    }
+
+    // 根据地区过滤
+    if (selectedRegions.length > 0) {
+      filteredGroups = filteredGroups.filter(group => {
+        const region = getRegionByGroupName(group);
+        return region && selectedRegions.includes(region);
+      });
+    }
+
+    setGroups(filteredGroups);
+
+    // 如果当前选中的小组不在过滤后的列表中，清空小组选择
+    if (selectedGroups.length > 0) {
+      const validGroups = selectedGroups.filter(g => filteredGroups.includes(g));
+      if (validGroups.length !== selectedGroups.length) {
+        setSelectedGroups(validGroups);
+      }
+    }
+  }, [selectedTeams, selectedRegions, allGroups]);
 
   // 当选择小组或日期范围改变时，加载该小组在该时间范围内有数据的销售列表
   useEffect(() => {
@@ -191,6 +254,7 @@ const Dashboard: React.FC = () => {
   const loadGroups = async () => {
     try {
       const groupList = await getGroups();
+      setAllGroups(groupList);
       setGroups(groupList);
     } catch (error) {
       message.error('加载小组列表失败');
@@ -233,10 +297,20 @@ const Dashboard: React.FC = () => {
     setLoading(true);
     try {
       const [start, end] = dateRange;
+      
+      // 确定要查询的小组：如果选择了具体小组则使用选择的小组，否则使用过滤后的小组列表
+      let queryGroups: string[] | undefined;
+      if (selectedGroups.length > 0) {
+        queryGroups = selectedGroups;
+      } else if (selectedTeams.length > 0 || selectedRegions.length > 0) {
+        // 如果选择了团队或地区但没有选择具体小组，使用过滤后的小组列表
+        queryGroups = groups.length > 0 ? groups : undefined;
+      }
+
       const params = {
         startDate: start.format('YYYY-MM-DD'),
         endDate: end.format('YYYY-MM-DD'),
-        groupNames: selectedGroups.length > 0 ? selectedGroups : undefined,
+        groupNames: queryGroups,
         openUserIds: selectedSales.length > 0 ? selectedSales : undefined,
       };
 
@@ -384,6 +458,34 @@ const Dashboard: React.FC = () => {
         </Space>
 
         <Space>
+          <Text>团队:</Text>
+          <Select
+            placeholder="全部团队"
+            style={{ width: 200 }}
+            mode="multiple"
+            allowClear
+            value={selectedTeams}
+            onChange={setSelectedTeams}
+            options={teamOptions}
+            maxTagCount="responsive"
+          />
+        </Space>
+
+        <Space>
+          <Text>地区:</Text>
+          <Select
+            placeholder="全部地区"
+            style={{ width: 200 }}
+            mode="multiple"
+            allowClear
+            value={selectedRegions}
+            onChange={setSelectedRegions}
+            options={regionOptions}
+            maxTagCount="responsive"
+          />
+        </Space>
+
+        <Space>
           <Text>小组:</Text>
           <Select
             placeholder="全部小组"
@@ -398,9 +500,9 @@ const Dashboard: React.FC = () => {
         </Space>
 
         <Space>
-          <Text>销售CM:</Text>
+          <Text>销售姓名:</Text>
           <Select
-            placeholder="全部CM"
+            placeholder="全部"
             style={{ width: 300 }}
             mode="multiple"
             allowClear
