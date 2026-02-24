@@ -191,7 +191,7 @@ export class DataCollectorService {
       
       if (result.success && asrResult?.success && asrResult?.asrData) {
         asrDataList.push({ asrData: asrResult.asrData });
-        processedIds.push(result.data.conversationId);
+        processedIds.push(result.data!.conversationId);
       } else {
         // 记录无效的ASR数据，包含详细原因
         let reason = '';

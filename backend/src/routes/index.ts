@@ -176,8 +176,17 @@ router.post('/collect-range', async (req: Request, res: Response) => {
       });
     }
 
-    // 执行批量采集
-    const result = await dataCollector.collectDataForRange(startDate, endDate);
+    // 执行批量采集（逐日采集）
+    const results: string[] = [];
+    const current = new Date(startDate);
+    const end = new Date(endDate);
+    while (current <= end) {
+      const dateStr = current.toISOString().slice(0, 10);
+      await dataCollector.collectDataForDate(dateStr);
+      results.push(dateStr);
+      current.setDate(current.getDate() + 1);
+    }
+    const result = { collectedDates: results };
 
     res.json({
       code: 0,
