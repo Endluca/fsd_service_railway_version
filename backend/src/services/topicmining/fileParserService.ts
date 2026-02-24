@@ -114,7 +114,11 @@ export class FileParserService {
     rows: CsvRawRow[];
     originalRowCount: number;
   } {
-    const text = buffer.toString('utf-8');
+    // 去除 UTF-8 BOM（Windows 上导出的 CSV 文件常带有 BOM）
+    let text = buffer.toString('utf-8');
+    if (text.charCodeAt(0) === 0xFEFF) {
+      text = text.slice(1);
+    }
 
     if (!text.trim()) {
       throw createError(400, 'CSV 文件内容为空');

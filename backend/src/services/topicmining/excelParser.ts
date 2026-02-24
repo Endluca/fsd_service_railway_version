@@ -69,7 +69,17 @@ export function parseExcel(buffer: Buffer): ExcelParseResult {
   }
 
   // 7. 提取表头和数据行
-  const headerRow = jsonData[0];
+  // 对表头进行深度清洗：去除 BOM、零宽字符、不可见字符、全角/半角空格
+  const rawHeaderRow = jsonData[0];
+  console.log('[ExcelParser] 原始表头:', JSON.stringify(rawHeaderRow));
+  const headerRow = rawHeaderRow.map((h) =>
+    String(h ?? '')
+      .replace(/^\uFEFF/, '')        // 去除 BOM
+      .replace(/[\u200B-\u200D\uFEFF\u00A0\u3000]/g, '') // 去除零宽/全角空格等不可见字符
+      .replace(/\s+/g, ' ')          // 合并连续空白
+      .trim()
+  );
+  console.log('[ExcelParser] 清洗后表头:', JSON.stringify(headerRow));
   const dataRows = jsonData.slice(1);
 
   // 8. 转换为标准化的行对象数组

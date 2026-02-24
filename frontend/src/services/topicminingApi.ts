@@ -10,7 +10,7 @@ import type {
 
 const client = axios.create({
   baseURL: '/api/topicmining',
-  timeout: 60000, // 文件解析可能需要较长时间
+  timeout: 300000, // 大文件解析可能需要较长时间（5分钟）
 });
 
 // 响应拦截器：提取 data 字段

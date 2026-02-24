@@ -6,7 +6,7 @@ import type { ReportPayload } from '../../types/topicmining/report';
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 150 * 1024 * 1024 }, // 150MB
+  limits: { fileSize: 300 * 1024 * 1024 }, // 300MB
 });
 
 export const reportsRouter = Router();
