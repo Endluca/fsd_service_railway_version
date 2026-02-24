@@ -30,10 +30,10 @@ const CsvUploader: React.FC<CsvUploaderProps> = ({ onParseSuccess }) => {
         return false;
       }
 
-      // 验证文件大小（限制 150MB）
-      const maxSize = 150 * 1024 * 1024;
+      // 验证文件大小（限制 300MB）
+      const maxSize = 300 * 1024 * 1024;
       if (file.size > maxSize) {
-        message.error('文件大小不能超过 150MB');
+        message.error('文件大小不能超过 300MB');
         return false;
       }
 
@@ -57,7 +57,7 @@ const CsvUploader: React.FC<CsvUploaderProps> = ({ onParseSuccess }) => {
     <div>
       <Alert
         message="上传说明"
-        description="请上传包含话题挖掘数据的文件(支持 CSV、XLSX、XLS 格式)，文件大小不超过 150MB。文件应包含以下列：话题名称、所属父类、所属子类、上下文片段等。"
+        description="请上传包含话题挖掘数据的文件(支持 CSV、XLSX、XLS 格式)，文件大小不超过 300MB。文件应包含以下列：话题名称、所属父类、所属子类、上下文片段等。"
         type="info"
         showIcon
         style={{ marginBottom: 16 }}
@@ -69,7 +69,7 @@ const CsvUploader: React.FC<CsvUploaderProps> = ({ onParseSuccess }) => {
         </p>
         <p className="ant-upload-text">点击或拖拽文件到此区域上传</p>
         <p className="ant-upload-hint">
-          支持 CSV、Excel(.xlsx/.xls)格式，文件大小不超过 150MB
+          支持 CSV、Excel(.xlsx/.xls)格式，文件大小不超过 300MB
         </p>
       </Dragger>
 
