@@ -33,6 +33,7 @@ export class FileParserService {
 
     // 1. 检测文件类型
     const fileType = detectFileType(buffer, filename, mimetype);
+    console.log(`[FileParser] 文件名: ${filename}, 大小: ${buffer.length} bytes, 类型: ${fileType}, 前4字节: ${buffer.slice(0, 4).toString('hex')}, mimetype: ${mimetype}`);
 
     // 2. 根据文件类型选择解析器
     let rows: CsvRawRow[];

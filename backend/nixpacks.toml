@@ -10,4 +10,4 @@ cmds = [
 dependsOn = ["setup"]
 
 [start]
-cmd = "npm run prisma:deploy && npm start"
+cmd = "npm run prisma:deploy && node --max-old-space-size=1024 dist/index.js"

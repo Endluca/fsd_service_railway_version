@@ -80,6 +80,7 @@ export function parseExcel(buffer: Buffer): ExcelParseResult {
       .trim()
   );
   console.log('[ExcelParser] 清洗后表头:', JSON.stringify(headerRow));
+  console.log('[ExcelParser] 总行数(含表头):', jsonData.length, '数据行数:', jsonData.length - 1);
   const dataRows = jsonData.slice(1);
 
   // 8. 转换为标准化的行对象数组
@@ -113,6 +114,9 @@ export function parseExcel(buffer: Buffer): ExcelParseResult {
     };
     rows.push(normalized);
   }
+
+  const mem = process.memoryUsage();
+  console.log(`[ExcelParser] 解析完成，有效行数: ${rows.length}，内存使用: heapUsed=${Math.round(mem.heapUsed/1024/1024)}MB rss=${Math.round(mem.rss/1024/1024)}MB`);
 
   return {
     rows,
