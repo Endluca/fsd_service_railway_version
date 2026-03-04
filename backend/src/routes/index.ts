@@ -103,12 +103,12 @@ router.get('/sales', async (req: Request, res: Response) => {
       endDate as string | undefined
     );
 
-    // 字段映射：数据库字段(megName/departmentName) -> 前端字段(name/groupName)
+    // 字段映射：数据库字段(megName/groupName) -> 前端字段(name/groupName)
     const result = sales.map((s) => ({
       openUserId: s.openUserId,
-      name: s.megName,              // 映射到前端的 name 字段
-      groupName: s.departmentName,  // 映射到前端的 groupName 字段
-      status: s.status,             // 新增状态字段
+      name: s.megName,
+      groupName: s.groupName,
+      status: s.status,
     }));
 
     res.json({

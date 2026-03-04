@@ -104,8 +104,8 @@ export class SalesSyncService {
         status = '用户不存在';
       }
 
-      // 3. 获取部门信息（只有主部门ID有效时才调用）
-      let departmentName = '默认值';
+      // 3. 获取部门信息（只有主部门ID有效时才调用），写入 group_name 字段
+      let groupName = '默认值';
       let parentDepartmentId = 0;
       let leadOpenUserId = '默认值';
 
@@ -113,7 +113,7 @@ export class SalesSyncService {
         // 检查部门缓存
         if (departmentCache.has(mainDepartmentId)) {
           const dept = departmentCache.get(mainDepartmentId);
-          departmentName = dept.name;
+          groupName = dept.name;
           parentDepartmentId = dept.parentId;
           leadOpenUserId = dept.leadId;
         } else {
@@ -123,13 +123,13 @@ export class SalesSyncService {
             );
 
             if (deptInfo) {
-              departmentName = deptInfo.name || '默认值';
+              groupName = deptInfo.name || '默认值';
               parentDepartmentId = deptInfo.parent_department_id || 0;
               leadOpenUserId = deptInfo.lead_open_user_id || '默认值';
 
               // 添加到缓存
               departmentCache.set(mainDepartmentId, {
-                name: departmentName,
+                name: groupName,
                 parentId: parentDepartmentId,
                 leadId: leadOpenUserId,
               });
@@ -171,7 +171,7 @@ export class SalesSyncService {
             mainDepartmentId,
             isDelete,
             status,
-            departmentName,
+            groupName,
             parentDepartmentId,
             leadOpenUserId,
             // 追加日志（如果有新错误）
@@ -188,7 +188,7 @@ export class SalesSyncService {
             mainDepartmentId,
             isDelete,
             status,
-            departmentName,
+            groupName,
             parentDepartmentId,
             leadOpenUserId,
             logInfo,

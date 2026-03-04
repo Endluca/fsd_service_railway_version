@@ -62,7 +62,7 @@ export class TrendService {
     // 否则使用组名过滤（组间对比）
     else if (groupNames && groupNames.length > 0) {
       where.salesPerson = {
-        departmentName: { in: groupNames }
+        groupName: { in: groupNames }
       };
     }
     // 不提供过滤条件时，返回所有数据（向下兼容）

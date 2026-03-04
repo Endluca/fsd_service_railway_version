@@ -154,7 +154,7 @@ export class DataService {
 
     for (const metric of dailyMetrics) {
       const { openUserId, customerTurnCount, timelyReplyCount, overtimeReplyCount, totalReplyDuration, newRuleCustomerTurnCount, overtimeNoReplyCount } = metric;
-      const { megName: name, departmentName: salesGroupName } = metric.salesPerson;
+      const { megName: name, groupName: salesGroupName } = metric.salesPerson;
 
       // 如果指定了小组过滤
       if (groupNames && groupNames.length > 0 && !groupNames.includes(salesGroupName || '')) {
@@ -296,37 +296,37 @@ export class DataService {
 
   /**
    * 获取所有部门列表（用于前端小组筛选）
-   * 修改：从department_name去重，而不是group_name
+   * 使用 group_name 字段（与线上数据库一致）
    */
   async getGroups() {
-    const departments = await prisma.salesPerson.findMany({
+    const groups = await prisma.salesPerson.findMany({
       where: {
-        departmentName: {
+        groupName: {
           not: '默认值', // 排除未成功获取部门信息的记录
         },
       },
       select: {
-        departmentName: true,
+        groupName: true,
       },
-      distinct: ['departmentName'],
+      distinct: ['groupName'],
       orderBy: {
-        departmentName: 'asc',
+        groupName: 'asc',
       },
     });
 
-    return departments
-      .map((d) => d.departmentName)
+    return groups
+      .map((d) => d.groupName)
       .filter(Boolean)
       .filter((dept) => dept !== '默认值');
   }
 
   /**
    * 获取销售列表
-   * @param groupNames 部门名称数组（可选）
+   * @param groupNames 部门/小组名称数组（可选）
    * @param startDate 开始日期（可选，格式：YYYY-MM-DD）
    * @param endDate 结束日期（可选，格式：YYYY-MM-DD）
    * @returns 销售列表。如果提供日期范围，则只返回该时间范围内有数据的销售
-   * 修改：字段名从name/groupName改为megName/departmentName
+   * 使用 group_name 字段（与线上数据库一致）
    */
   async getSalesList(groupNames?: string[], startDate?: string, endDate?: string) {
     // 如果提供了日期范围，只返回该时间范围内有数据的销售
@@ -343,19 +343,19 @@ export class DataService {
       };
 
       if (groupNames && groupNames.length > 0) {
-        where.departmentName = { in: groupNames }; // 从groupName改为departmentName
+        where.groupName = { in: groupNames };
       }
 
       const sales = await prisma.salesPerson.findMany({
         where,
         select: {
           openUserId: true,
-          megName: true, // 从name改为megName
-          departmentName: true, // 从groupName改为departmentName
-          status: true, // 新增状态字段
+          megName: true,
+          groupName: true,
+          status: true,
         },
         orderBy: {
-          megName: 'asc', // 从name改为megName
+          megName: 'asc',
         },
       });
 
@@ -365,19 +365,19 @@ export class DataService {
     // 如果没有提供日期范围，返回所有销售（原有逻辑）
     const where: Prisma.SalesPersonWhereInput = {};
     if (groupNames && groupNames.length > 0) {
-      where.departmentName = { in: groupNames }; // 从groupName改为departmentName
+      where.groupName = { in: groupNames };
     }
 
     const sales = await prisma.salesPerson.findMany({
       where,
       select: {
         openUserId: true,
-        megName: true, // 从name改为megName
-        departmentName: true, // 从groupName改为departmentName
-        status: true, // 新增状态字段
+        megName: true,
+        groupName: true,
+        status: true,
       },
       orderBy: {
-        megName: 'asc', // 从name改为megName
+        megName: 'asc',
       },
     });
 

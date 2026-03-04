@@ -8,16 +8,17 @@ async function analyzeData() {
 
   // 1. 查找所有 name 重复的记录
   const allSales = await prisma.salesPerson.findMany({
-    orderBy: { name: 'asc' },
+    orderBy: { megName: 'asc' },
   });
 
-  // 按 name 分组
+  // 按 megName 分组
   const nameMap = new Map<string, typeof allSales>();
   for (const sale of allSales) {
-    if (!nameMap.has(sale.name)) {
-      nameMap.set(sale.name, []);
+    const name = sale.megName;
+    if (!nameMap.has(name)) {
+      nameMap.set(name, []);
     }
-    nameMap.get(sale.name)!.push(sale);
+    nameMap.get(name)!.push(sale);
   }
 
   // 找出重复的 name
@@ -39,7 +40,7 @@ async function analyzeData() {
     console.log(`Name: ${name} (出现 ${sales.length} 次)`);
 
     for (const sale of sales) {
-      const isError = sale.openUserId === sale.name;
+      const isError = sale.openUserId === sale.megName;
       console.log(`  - openUserId: ${sale.openUserId}, groupName: ${sale.groupName || '未分配'}`);
 
       if (isError) {

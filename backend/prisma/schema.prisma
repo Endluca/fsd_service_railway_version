@@ -18,8 +18,8 @@ model SalesPerson {
   isDelete            Boolean         @default(false) @map("is_delete") // 是否离职
   status              String          @default("正常") @map("status") @db.VarChar(20)  // 状态：正常/用户不存在
   
-  // 来自部门API的信息
-  departmentName      String          @default("默认值") @map("department_name") @db.VarChar(100)  // 部门名称
+  // 来自部门API的信息（线上数据库字段为 group_name）
+  groupName           String          @default("默认值") @map("group_name") @db.VarChar(100)  // 小组/部门名称
   parentDepartmentId  Int             @default(0) @map("parent_department_id")          // 父部门ID
   leadOpenUserId      String          @default("默认值") @map("lead_open_user_id") @db.VarChar(100)  // 部门负责人
   
@@ -35,7 +35,7 @@ model SalesPerson {
 
   // 索引
   @@index([megName])
-  @@index([departmentName])
+  @@index([groupName])
   @@index([status])
   @@index([mainDepartmentId])
 

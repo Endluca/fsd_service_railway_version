@@ -37,7 +37,7 @@ async function checkData() {
     // 按小组分组
     const groupStats = {};
     dailyMetrics.forEach(metric => {
-      const groupName = metric.salesPerson.departmentName || '未分配';
+      const groupName = metric.salesPerson.groupName || '未分配';
       if (!groupStats[groupName]) {
         groupStats[groupName] = {
           salesCount: 0,
