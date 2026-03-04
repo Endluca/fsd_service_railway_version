@@ -27,7 +27,7 @@ async function checkData() {
       
       if (count === 0) {
         totalWithEmpty++;
-        console.log(`- ${metric.salesPerson.megName || metric.openUserId}: 0 条`);
+        console.log(`- ${metric.salesPerson.name || metric.openUserId}: 0 条`);
       }
     });
     

@@ -154,7 +154,7 @@ export class DataService {
 
     for (const metric of dailyMetrics) {
       const { openUserId, customerTurnCount, timelyReplyCount, overtimeReplyCount, totalReplyDuration, newRuleCustomerTurnCount, overtimeNoReplyCount } = metric;
-      const { megName: name, groupName: salesGroupName } = metric.salesPerson;
+      const { name: salesName, groupName: salesGroupName } = metric.salesPerson;
 
       // 如果指定了小组过滤
       if (groupNames && groupNames.length > 0 && !groupNames.includes(salesGroupName || '')) {
@@ -163,7 +163,7 @@ export class DataService {
 
       if (!salesMap.has(openUserId)) {
         salesMap.set(openUserId, {
-          name,
+          name: salesName,
           groupName: salesGroupName,
           customerTurnCount: 0,
           timelyReplyCount: 0,
@@ -350,12 +350,12 @@ export class DataService {
         where,
         select: {
           openUserId: true,
-          megName: true,
+          name: true,
           groupName: true,
           status: true,
         },
         orderBy: {
-          megName: 'asc',
+          name: 'asc',
         },
       });
 
@@ -372,12 +372,12 @@ export class DataService {
       where,
       select: {
         openUserId: true,
-        megName: true,
+        name: true,
         groupName: true,
         status: true,
       },
       orderBy: {
-        megName: 'asc',
+        name: 'asc',
       },
     });
 

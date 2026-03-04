@@ -13,7 +13,7 @@ const prisma = new PrismaClient();
       ],
       select: {
         openUserId: true,
-        megName: true,
+        name: true,
         groupName: true
       }
     });

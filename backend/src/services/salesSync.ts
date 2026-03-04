@@ -90,13 +90,13 @@ export class SalesSyncService {
       }
 
       // 2. 准备基础数据
-      let megName = '默认值';
+      let salesName = '默认值';
       let mainDepartmentId = 0;
       let isDelete = false;
       let status = '正常';
 
       if (userInfo) {
-        megName = userInfo.name || '默认值';
+        salesName = userInfo.name || '默认值';
         mainDepartmentId = userInfo.main_department_id || 0;
         isDelete = userInfo.status?.is_delete || false;
         status = '正常';
@@ -167,7 +167,7 @@ export class SalesSyncService {
         await prisma.salesPerson.update({
           where: { openUserId },
           data: {
-            megName,
+            name: salesName,
             mainDepartmentId,
             isDelete,
             status,
@@ -184,7 +184,7 @@ export class SalesSyncService {
         await prisma.salesPerson.create({
           data: {
             openUserId,
-            megName,
+            name: salesName,
             mainDepartmentId,
             isDelete,
             status,
@@ -194,7 +194,7 @@ export class SalesSyncService {
             logInfo,
           },
         });
-        console.log(`✓ 已创建销售: ${openUserId} (${megName})`);
+        console.log(`✓ 已创建销售: ${openUserId} (${salesName})`);
       }
 
       // 6. 添加到已同步集合

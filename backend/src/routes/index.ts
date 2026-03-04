@@ -103,10 +103,10 @@ router.get('/sales', async (req: Request, res: Response) => {
       endDate as string | undefined
     );
 
-    // 字段映射：数据库字段(megName/groupName) -> 前端字段(name/groupName)
+    // 字段映射：数据库字段(name/groupName) -> 前端字段(name/groupName)
     const result = sales.map((s) => ({
       openUserId: s.openUserId,
-      name: s.megName,
+      name: s.name,
       groupName: s.groupName,
       status: s.status,
     }));

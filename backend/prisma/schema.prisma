@@ -13,7 +13,7 @@ datasource db {
 model SalesPerson {
   id                  Int             @id @default(autoincrement())
   openUserId          String          @unique @map("open_user_id") @db.VarChar(100)
-  megName             String          @map("meg_name") @db.VarChar(100)  // 来自销售API的姓名
+  name                String          @map("name") @db.VarChar(100)  // 销售姓名（线上数据库字段为 name）
   mainDepartmentId    Int             @map("main_department_id")        // 主部门ID
   isDelete            Boolean         @default(false) @map("is_delete") // 是否离职
   status              String          @default("正常") @map("status") @db.VarChar(20)  // 状态：正常/用户不存在
@@ -34,7 +34,7 @@ model SalesPerson {
   cacheRecords        DateRangeCache[]
 
   // 索引
-  @@index([megName])
+  @@index([name])
   @@index([groupName])
   @@index([status])
   @@index([mainDepartmentId])
