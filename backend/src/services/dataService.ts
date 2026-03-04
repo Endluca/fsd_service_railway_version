@@ -352,7 +352,6 @@ export class DataService {
           openUserId: true,
           name: true,
           groupName: true,
-          status: true,
         },
         orderBy: {
           name: 'asc',
@@ -374,7 +373,6 @@ export class DataService {
         openUserId: true,
         name: true,
         groupName: true,
-        status: true,
       },
       orderBy: {
         name: 'asc',

@@ -103,12 +103,12 @@ router.get('/sales', async (req: Request, res: Response) => {
       endDate as string | undefined
     );
 
-    // 字段映射：数据库字段(name/groupName) -> 前端字段(name/groupName)
+    // 字段映射：数据库字段 -> 前端字段（线上库无 status，返回默认值）
     const result = sales.map((s) => ({
       openUserId: s.openUserId,
       name: s.name,
       groupName: s.groupName,
-      status: s.status,
+      status: '正常',
     }));
 
     res.json({

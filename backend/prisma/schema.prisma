@@ -9,36 +9,21 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// 销售人员信息表
+// 销售人员信息表（线上库结构：id, open_user_id, name, group_name, created_at, updated_at）
 model SalesPerson {
-  id                  Int             @id @default(autoincrement())
-  openUserId          String          @unique @map("open_user_id") @db.VarChar(100)
-  name                String          @map("name") @db.VarChar(100)  // 销售姓名（线上数据库字段为 name）
-  mainDepartmentId    Int             @map("main_department_id")        // 主部门ID
-  isDelete            Boolean         @default(false) @map("is_delete") // 是否离职
-  status              String          @default("正常") @map("status") @db.VarChar(20)  // 状态：正常/用户不存在
-  
-  // 来自部门API的信息（线上数据库字段为 group_name）
-  groupName           String          @default("默认值") @map("group_name") @db.VarChar(100)  // 小组/部门名称
-  parentDepartmentId  Int             @default(0) @map("parent_department_id")          // 父部门ID
-  leadOpenUserId      String          @default("默认值") @map("lead_open_user_id") @db.VarChar(100)  // 部门负责人
-  
-  // 同步日志
-  logInfo             String?         @map("log_info") @db.Text        // 同步错误日志（JSON数组）
-  
-  createdAt           DateTime        @default(now()) @map("created_at")
-  updatedAt           DateTime        @updatedAt @map("updated_at")
+  id          Int      @id @default(autoincrement())
+  openUserId  String   @unique @map("open_user_id") @db.VarChar(100)
+  name        String   @map("name") @db.VarChar(100)  // 销售姓名
+  groupName   String   @default("未分配小组") @map("group_name") @db.VarChar(100)  // 所属小组
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   // 关系
-  dailyMetrics        DailyMetric[]
-  cacheRecords        DateRangeCache[]
+  dailyMetrics DailyMetric[]
+  cacheRecords DateRangeCache[]
 
-  // 索引
   @@index([name])
   @@index([groupName])
-  @@index([status])
-  @@index([mainDepartmentId])
-
   @@map("sales_person")
 }
 

@@ -89,110 +89,49 @@ export class SalesSyncService {
         }
       }
 
-      // 2. 准备基础数据
-      let salesName = '默认值';
+      // 2. 准备基础数据（线上库仅有 name、group_name）
+      let salesName = openUserId;  // 默认用 openUserId
       let mainDepartmentId = 0;
-      let isDelete = false;
-      let status = '正常';
 
       if (userInfo) {
-        salesName = userInfo.name || '默认值';
+        salesName = userInfo.name || openUserId;
         mainDepartmentId = userInfo.main_department_id || 0;
-        isDelete = userInfo.status?.is_delete || false;
-        status = '正常';
-      } else if (!isUserExist) {
-        status = '用户不存在';
       }
 
-      // 3. 获取部门信息（只有主部门ID有效时才调用），写入 group_name 字段
-      let groupName = '默认值';
-      let parentDepartmentId = 0;
-      let leadOpenUserId = '默认值';
-
-      if (mainDepartmentId > 0) {
-        // 检查部门缓存
-        if (departmentCache.has(mainDepartmentId)) {
-          const dept = departmentCache.get(mainDepartmentId);
-          groupName = dept.name;
-          parentDepartmentId = dept.parentId;
-          leadOpenUserId = dept.leadId;
-        } else {
-          try {
-            const deptInfo = await swApiClient.getDepartmentInfo(
-              mainDepartmentId
-            );
-
-            if (deptInfo) {
-              groupName = deptInfo.name || '默认值';
-              parentDepartmentId = deptInfo.parent_department_id || 0;
-              leadOpenUserId = deptInfo.lead_open_user_id || '默认值';
-
-              // 添加到缓存
-              departmentCache.set(mainDepartmentId, {
-                name: groupName,
-                parentId: parentDepartmentId,
-                leadId: leadOpenUserId,
-              });
-            } else {
-              // 部门不存在
-              syncLogs.push({
-                time: timestamp,
-                error: `部门 ${mainDepartmentId} 不存在`,
-                code: 401103,
-              });
-            }
-          } catch (error: any) {
-            // 部门API调用失败（网络超时等）
-            syncLogs.push({
-              time: timestamp,
-              error: `获取部门 ${mainDepartmentId} 信息失败: ${
-                error.message
-              }`,
-              code: error.response?.data?.code || 500,
+      // 3. 获取部门/小组名称（从 API）
+      let groupName = '未分配小组';
+      if (mainDepartmentId > 0 && departmentCache.has(mainDepartmentId)) {
+        groupName = departmentCache.get(mainDepartmentId)!.name || '未分配小组';
+      } else if (mainDepartmentId > 0) {
+        try {
+          const deptInfo = await swApiClient.getDepartmentInfo(mainDepartmentId);
+          if (deptInfo?.name) {
+            groupName = deptInfo.name;
+            departmentCache.set(mainDepartmentId, {
+              name: groupName,
+              parentId: deptInfo.parent_department_id || 0,
+              leadId: deptInfo.lead_open_user_id || '默认值',
             });
           }
+        } catch (error: any) {
+          console.warn(`获取部门 ${mainDepartmentId} 失败:`, error.message);
         }
       }
 
-      // 4. 准备log_info
-      const logInfo = syncLogs.length > 0 ? JSON.stringify(syncLogs) : null;
-
-      // 5. 检查数据库中是否已存在
+      // 4. 检查数据库中是否已存在
       const existing = await prisma.salesPerson.findUnique({
         where: { openUserId },
       });
 
       if (existing) {
-        // 更新现有记录（每次都更新，保证信息最新）
         await prisma.salesPerson.update({
           where: { openUserId },
-          data: {
-            name: salesName,
-            mainDepartmentId,
-            isDelete,
-            status,
-            groupName,
-            parentDepartmentId,
-            leadOpenUserId,
-            // 追加日志（如果有新错误）
-            logInfo: syncLogs.length > 0 ? logInfo : existing.logInfo,
-          },
+          data: { name: salesName, groupName },
         });
         console.log(`✓ 已更新销售: ${openUserId}`);
       } else {
-        // 创建新记录
         await prisma.salesPerson.create({
-          data: {
-            openUserId,
-            name: salesName,
-            mainDepartmentId,
-            isDelete,
-            status,
-            groupName,
-            parentDepartmentId,
-            leadOpenUserId,
-            logInfo,
-          },
+          data: { openUserId, name: salesName, groupName },
         });
         console.log(`✓ 已创建销售: ${openUserId} (${salesName})`);
       }
