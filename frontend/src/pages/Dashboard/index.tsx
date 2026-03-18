@@ -304,7 +304,13 @@ const Dashboard: React.FC = () => {
         queryGroups = selectedGroups;
       } else if (selectedTeams.length > 0 || selectedRegions.length > 0) {
         // 如果选择了团队或地区但没有选择具体小组，使用过滤后的小组列表
-        queryGroups = groups.length > 0 ? groups : undefined;
+        if (groups.length === 0) {
+          // 过滤后没有匹配的小组，提示用户而不是回退到查全部数据
+          message.warning('当前筛选条件下没有匹配的小组，请调整团队或地区选择');
+          setLoading(false);
+          return;
+        }
+        queryGroups = groups;
       }
 
       const params = {
